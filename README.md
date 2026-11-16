@@ -2,7 +2,7 @@
 
 Game đấu trường sinh tồn pixel art 2D (HTML5 Canvas + JavaScript thuần), giao diện 100% tiếng Việt.
 
-**▶ Chơi ngay:** https://ritapham2k6.github.io/pixel-arena/
+**▶ Chơi ngay:** https://sweet2k6.github.io/pixel-arena/
 
 ## Tính năng
 - **3 nhân vật:** Xạ Thủ, Võ Sư, Pháp Sư Năng Lượng — giáp tự hồi khi không trúng đòn.
