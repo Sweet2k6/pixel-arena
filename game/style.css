@@ -1,0 +1,571 @@
+/* =====================================================================================
+   PIXEL ARENA — giao diện
+   Kích thước chữ của #stage do main.js đặt = 1/60 chiều rộng màn chơi,
+   nên mọi kích thước dùng đơn vị "em" để menu luôn co giãn vừa khung game.
+   ===================================================================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0d0b14;
+  --panel: #1b1726;
+  --panel-2: #241e33;
+  --line: #4a4066;
+  --line-dark: #2a2440;
+  --text: #e8e2f6;
+  --muted: #a69dc4;
+  --gold: #ffe26b;
+  --gold-dark: #c8892a;
+  --hp: #e8343f;
+  --armor: #7fa2d8;
+  --speed: #5fdc8c;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd {
+  font-family: Consolas, monospace;
+  font-size: 0.85em;
+  padding: 0 0.3em;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 0.2em;
+  background: #120f1c;
+  color: var(--gold);
+}
+.hidden { display: none !important; }
+
+/* ---------------- Khung game ---------------- */
+#stage {
+  position: relative;
+  line-height: 0;
+  font-size: 16px; /* main.js ghi đè theo kích thước cửa sổ */
+  box-shadow: 0 0 0 4px var(--line-dark), 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+#game {
+  display: block;
+  /* Giữ pixel vuông, không bị làm mờ khi phóng to */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  outline: none;
+}
+#stage.in-game #game { cursor: none; } /* game tự vẽ tâm ngắm */
+
+.screen {
+  position: absolute;
+  inset: 0;
+  line-height: 1.35;
+  overflow: hidden;
+}
+
+/* =====================================================================================
+   MÀN HÌNH CHÍNH
+   ===================================================================================== */
+#menu {
+  --hero-accent: var(--gold); /* main.js đổi theo màu kỹ năng của nhân vật đang chọn */
+  display: flex;
+  flex-direction: column;
+  padding: 0.9em 1.3em 0.9em;
+  /* >>> ẢNH NỀN MÀN HÌNH CHÍNH: đặt file tại game/assets/menu-bg.png (nên dùng ảnh 16:9, ví dụ 960x540).
+         Nếu chưa có ảnh, lớp gradient bên dưới sẽ hiện thay (nền hầm ngục tối). */
+  background:
+    radial-gradient(ellipse at 50% 115%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.55) 75%),
+    url("./assets/menu-bg.png") center / cover no-repeat,
+    radial-gradient(ellipse at 32% 60%, #2c2140 0%, #17121f 55%, #0a0810 100%);
+  image-rendering: pixelated;
+}
+
+/* Gạch tường mờ (chỉ thấy khi chưa có ảnh nền) */
+#menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background:
+    linear-gradient(#000 0.12em, transparent 0.12em) 0 0 / 4em 2em,
+    linear-gradient(90deg, #000 0.12em, transparent 0.12em) 0 0 / 4em 4em,
+    linear-gradient(90deg, #000 0.12em, transparent 0.12em) 2em 2em / 4em 4em;
+}
+
+/* Đuốc trên tường: ánh lửa lập lòe 2 bên */
+.torch {
+  position: absolute;
+  top: 3.2em;
+  width: 9em;
+  height: 9em;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 170, 60, 0.32) 0%, rgba(255, 110, 30, 0.12) 35%, transparent 65%);
+  animation: flicker 2.2s infinite steps(6);
+}
+.torch::after {           /* ngọn lửa pixel */
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 0.6em; height: 0.9em;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(#fff2a8 0 30%, #ffb347 30% 65%, #e8541c 65%);
+  box-shadow: 0 0.9em 0 -0.1em #4a2f1c, 0 1.3em 0 -0.1em #4a2f1c;
+}
+.torch-left { left: -3.9em; }
+.torch-right { right: -3.9em; animation-delay: -1.1s; }
+@keyframes flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  33% { opacity: 0.8; transform: scale(0.96); }
+  66% { opacity: 0.92; transform: scale(1.03); }
+}
+
+/* ---------- Tiêu đề ---------- */
+.menu-header { text-align: center; position: relative; z-index: 1; }
+.title-canvas {
+  display: block;
+  margin: 0 auto;
+  width: 24em;           /* 96px gốc -> phóng to */
+  height: 3.5em;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0.25em 0 rgba(0, 0, 0, 0.5));
+}
+.subtitle {
+  font-size: 0.72em;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 0.2em;
+}
+
+/* ---------- Thân menu: trái = chọn nhân vật, phải = bảng thông tin ---------- */
+.menu-body {
+  flex: 1;
+  display: flex;
+  gap: 1.1em;
+  min-height: 0;
+  margin-top: 0.5em;
+  position: relative;
+  z-index: 1;
+}
+
+.showcase {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.roster-row { display: flex; align-items: center; gap: 0.4em; }
+
+.roster {
+  flex: 1;
+  display: flex;
+  justify-content: safe center;
+  align-items: flex-end;
+  gap: 0.6em;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 3.4em 0.6em 0.4em; /* chừa chỗ cho đèn sân khấu */
+}
+.roster::-webkit-scrollbar { display: none; }
+
+/* Thẻ nhân vật đứng trên bục */
+.hero-card {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  width: 7.6em;
+  padding: 0.3em 0 0.4em;
+  background: none;
+  border: none;
+  filter: brightness(0.55) saturate(0.7);
+  transition: transform 0.18s ease-out, filter 0.18s;
+}
+.hero-card:hover { filter: brightness(0.85); transform: translateY(-0.2em); }
+.hero-card:focus-visible { outline: 0.12em dashed var(--gold); outline-offset: 0.2em; }
+
+.hero-canvas {
+  position: relative;
+  z-index: 1;
+  width: 7.2em;  /* 48x56 px gốc */
+  height: 8.4em;
+  image-rendering: pixelated;
+}
+/* Bục đứng */
+.hero-card::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2.1em;
+  width: 6.4em;
+  height: 1.3em;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #3a3152 0%, #241e33 60%, transparent 72%);
+  box-shadow: 0 0.2em 0 #120f1c;
+}
+.hero-name {
+  font-weight: 700;
+  font-size: 0.78em;
+  white-space: nowrap;
+  padding: 0.15em 0.6em;
+  border: 0.12em solid var(--line-dark);
+  background: rgba(13, 11, 20, 0.8);
+  color: var(--muted);
+}
+
+/* Nhân vật đang chọn: đèn sân khấu + vòng sáng dưới chân + khung vàng */
+.hero-card.selected {
+  filter: none;
+  transform: translateY(-0.4em) scale(1.12);
+  z-index: 2;
+}
+.hero-card.selected::before {   /* chùm đèn rọi từ trên xuống */
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2.2em;
+  width: 9em;
+  height: 13em;
+  transform: translateX(-50%);
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+  background: linear-gradient(to bottom, rgba(255, 236, 160, 0.02), rgba(255, 226, 107, 0.22));
+  pointer-events: none;
+  animation: beam 2.4s ease-in-out infinite;
+}
+.hero-card.selected::after {
+  background: radial-gradient(ellipse, var(--hero-accent) 0%, rgba(255, 226, 107, 0.35) 35%, #241e33 62%, transparent 72%);
+  animation: ring 1.2s ease-in-out infinite;
+}
+.hero-card.selected .hero-name {
+  color: #1b1208;
+  background: var(--gold);
+  border-color: #fff4c0;
+  box-shadow: 0 0.15em 0 var(--gold-dark);
+}
+@keyframes beam { 50% { opacity: 0.7; } }
+@keyframes ring { 50% { filter: brightness(1.35); } }
+
+/* Nút mũi tên < > */
+.nav-arrow {
+  flex: 0 0 auto;
+  width: 2.2em;
+  height: 2.6em;
+  font-family: Consolas, monospace;
+  font-size: 1.1em;
+  font-weight: 700;
+  color: var(--gold);
+  background: var(--panel);
+  border: 0.12em solid var(--line);
+  box-shadow: 0 0.18em 0 #0a0810;
+  transition: transform 0.08s;
+}
+.nav-arrow:hover { background: var(--panel-2); border-color: var(--gold); }
+.nav-arrow:active { transform: translateY(0.12em); box-shadow: 0 0.06em 0 #0a0810; }
+
+.hint {
+  text-align: center;
+  font-size: 0.66em;
+  color: var(--muted);
+  margin-top: 0.5em;
+}
+
+/* ---------- Bảng thông tin (kiểu Soul Knight) ---------- */
+.info-panel {
+  flex: 1;
+  max-width: 24em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+  padding: 0.8em 0.9em;
+  background: linear-gradient(180deg, rgba(36, 30, 51, 0.96), rgba(22, 18, 32, 0.96));
+  border: 0.15em solid var(--line);
+  box-shadow: inset 0 0 0 0.12em #120f1c, 0 0.3em 0 #0a0810, 0 0 2em rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.info-head { display: flex; align-items: baseline; gap: 0.5em; flex-wrap: wrap; }
+.info-head h2 {
+  font-size: 1.15em;
+  color: var(--gold);
+  text-shadow: 0 0.1em 0 #000;
+  letter-spacing: 0.02em;
+}
+.info-title { font-size: 0.66em; color: var(--muted); font-style: italic; }
+.info-desc { font-size: 0.68em; color: #cfc8e4; }
+
+.stats { display: flex; flex-direction: column; gap: 0.3em; }
+.stat { display: grid; grid-template-columns: 4.6em 1fr 2em; align-items: center; gap: 0.5em; font-size: 0.72em; }
+.stat-label { display: flex; align-items: center; gap: 0.35em; font-weight: 700; }
+.stat-track {
+  height: 0.75em;
+  background: #120f1c;
+  border: 0.1em solid #000;
+  box-shadow: inset 0 0 0 0.1em var(--line-dark);
+}
+.stat-fill {
+  height: 100%;
+  width: 0;
+  transition: width 0.35s cubic-bezier(.2, .9, .3, 1.2);
+  /* vạch chia ô kiểu pixel */
+  background-image: repeating-linear-gradient(90deg, transparent 0 0.9em, rgba(0, 0, 0, 0.35) 0.9em 1em);
+}
+.fill-hp { background-color: var(--hp); box-shadow: inset 0 0.18em 0 #ff8a92; }
+.fill-armor { background-color: var(--armor); box-shadow: inset 0 0.18em 0 #c4d6f4; }
+.fill-speed { background-color: var(--speed); box-shadow: inset 0 0.18em 0 #b4f5c8; }
+.stat-val { text-align: right; font-family: Consolas, monospace; font-weight: 700; }
+.stat-note { font-size: 0.58em; color: var(--muted); font-style: italic; }
+
+/* Biểu tượng nhỏ cho chỉ số (vẽ bằng CSS) */
+.ico { display: inline-block; width: 0.8em; height: 0.8em; flex: 0 0 auto; }
+.ico-hp { background: var(--hp); clip-path: polygon(50% 100%, 0 40%, 0 15%, 20% 0, 50% 20%, 80% 0, 100% 15%, 100% 40%); }
+.ico-armor { background: var(--armor); clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%); }
+.ico-speed { background: var(--speed); clip-path: polygon(55% 0, 10% 55%, 45% 55%, 35% 100%, 90% 40%, 55% 40%); }
+
+/* Ô vũ khí & kỹ năng */
+.slot-row {
+  display: flex;
+  gap: 0.6em;
+  align-items: flex-start;
+  padding-top: 0.5em;
+  border-top: 0.1em dashed var(--line-dark);
+}
+.slot-box {
+  flex: 0 0 auto;
+  width: 3em;
+  height: 3em;
+  display: grid;
+  place-items: center;
+  background: #120f1c;
+  border: 0.12em solid var(--line);
+  box-shadow: inset 0 0 0 0.1em #000;
+}
+.slot-box canvas { image-rendering: pixelated; }
+.weapon-box { width: 4.4em; }
+.weapon-box canvas { width: 3.9em; height: 1.95em; }
+.skill-box {
+  --skill-color: var(--gold);
+  border-color: var(--skill-color);
+  box-shadow: inset 0 0 0 0.1em #000, 0 0 0.6em color-mix(in srgb, var(--skill-color) 45%, transparent);
+}
+.skill-box canvas { width: 2.5em; height: 2.5em; }
+.slot-text { display: flex; flex-direction: column; min-width: 0; }
+.slot-kicker { font-size: 0.56em; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.slot-text strong { font-size: 0.82em; color: var(--text); }
+.slot-desc { font-size: 0.64em; color: #cfc8e4; }
+.cd-badge {
+  display: inline-block;
+  margin-left: 0.3em;
+  padding: 0 0.4em;
+  background: #120f1c;
+  border: 1px solid var(--line);
+  color: var(--gold);
+  letter-spacing: 0;
+}
+
+/* ---------- Chân menu: Mute + nút VÀO TRẬN ---------- */
+.menu-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  margin-top: 0.5em;
+  position: relative;
+  z-index: 1;
+}
+.controls { flex: 1; font-size: 0.56em; color: var(--muted); }
+.controls kbd { font-size: 0.9em; }
+
+/* ---------- Bộ chọn bản đồ (cạnh nút VÀO TRẬN) ---------- */
+.map-picker { display: flex; align-items: center; gap: 0.25em; }
+.map-arrow { width: 1.6em; height: 2.6em; font-size: 0.8em; }
+.map-info {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  width: 13.5em;
+  padding: 0.3em 0.45em;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 0.12em solid var(--gold-dark);
+  box-shadow: inset 0 0 0 0.1em #000, 0 0.18em 0 #0a0810;
+}
+.map-info canvas {
+  width: 3.4em;
+  height: 1.87em;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  border: 0.1em solid var(--line);
+}
+.map-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.map-text strong { font-size: 0.72em; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-text kbd { font-size: 0.85em; padding: 0 0.2em; }
+.map-desc { font-size: 0.48em; color: #cfc8e4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.btn-icon {
+  width: 2.6em;
+  height: 2.6em;
+  font-size: 1em;
+  line-height: 1;
+  background: var(--panel);
+  border: 0.12em solid var(--line);
+  box-shadow: 0 0.18em 0 #0a0810;
+}
+.btn-icon:hover { border-color: var(--gold); }
+.btn-icon[aria-pressed="true"] { opacity: 0.65; }
+
+.btn-start, .btn-secondary {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  transition: transform 0.08s, filter 0.12s;
+}
+.btn-start small, .btn-secondary small {
+  font-size: 0.42em;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.btn-start {
+  font-size: 1.45em;
+  padding: 0.35em 1.3em 0.3em;
+  color: #2a1505;
+  background: linear-gradient(#fff1a0, var(--gold) 45%, #f0b43a);
+  border: 0.1em solid #fff8d0;
+  box-shadow: 0 0 0 0.1em #6a3a10, 0 0.22em 0 #6a3a10, 0 0 1.2em rgba(255, 210, 90, 0.45);
+  text-shadow: 0 0.06em 0 rgba(255, 255, 255, 0.6);
+  animation: glow 1.6s ease-in-out infinite;
+}
+.btn-start:hover { filter: brightness(1.08); transform: translateY(-0.06em); }
+.btn-start:active { transform: translateY(0.14em); box-shadow: 0 0 0 0.1em #6a3a10, 0 0.06em 0 #6a3a10; }
+.btn-start:focus-visible, .btn-secondary:focus-visible, .btn-icon:focus-visible, .nav-arrow:focus-visible {
+  outline: 0.12em dashed #fff;
+  outline-offset: 0.25em;
+}
+@keyframes glow { 50% { box-shadow: 0 0 0 0.1em #6a3a10, 0 0.22em 0 #6a3a10, 0 0 2em rgba(255, 210, 90, 0.75); } }
+
+.btn-secondary {
+  font-size: 0.95em;
+  padding: 0.55em 1.1em 0.45em;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 0.12em solid var(--line);
+  box-shadow: 0 0.2em 0 #0a0810;
+}
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-secondary:active { transform: translateY(0.12em); box-shadow: 0 0.06em 0 #0a0810; }
+
+/* =====================================================================================
+   GAME OVER
+   ===================================================================================== */
+#gameover {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(40, 6, 14, 0.7), rgba(8, 6, 12, 0.88));
+  animation: fadein 0.35s ease-out;
+}
+.go-card {
+  text-align: center;
+  padding: 1.2em 2em 1.4em;
+  min-width: 22em;
+  background: linear-gradient(180deg, rgba(36, 30, 51, 0.97), rgba(22, 18, 32, 0.97));
+  border: 0.15em solid #7a2a3a;
+  box-shadow: inset 0 0 0 0.12em #120f1c, 0 0.3em 0 #0a0810;
+  animation: pop 0.3s cubic-bezier(.2, .9, .3, 1.3);
+}
+.go-title {
+  font-size: 2.2em;
+  letter-spacing: 0.12em;
+  color: #ff4a5a;
+  text-shadow: 0 0.08em 0 #4a0a14, 0 0 0.6em rgba(255, 60, 80, 0.5);
+}
+.go-sub { font-size: 0.72em; color: var(--muted); margin-top: 0.2em; }
+.go-sub span { color: var(--text); font-weight: 700; }
+.go-record { margin-top: 0.4em; font-size: 0.8em; font-weight: 900; color: var(--gold); animation: glowtext 0.8s infinite alternate; }
+.go-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5em;
+  margin: 0.9em 0 1.1em;
+}
+.go-stats div { background: #120f1c; border: 0.1em solid var(--line-dark); padding: 0.35em 0.2em; }
+.go-stats dt { font-size: 0.56em; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.go-stats dd { font-family: Consolas, monospace; font-size: 1.05em; font-weight: 700; color: var(--gold); }
+.go-stats .dd-text { font-family: inherit; font-size: 0.66em; line-height: 1.25; padding-top: 0.25em; }
+.go-stats .span-2 { grid-column: span 2; }
+.go-buttons { display: flex; gap: 0.8em; justify-content: center; align-items: center; }
+.go-buttons .btn-start { font-size: 1.15em; }
+
+/* =====================================================================================
+   LÊN CẤP — chọn 1 trong 3 thẻ nâng cấp
+   ===================================================================================== */
+#levelup {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(16, 30, 60, 0.72), rgba(8, 6, 12, 0.88));
+  animation: fadein 0.25s ease-out;
+}
+.lv-card { text-align: center; animation: pop 0.3s cubic-bezier(.2, .9, .3, 1.3); }
+.lv-title {
+  font-size: 2em;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-shadow: 0 0.08em 0 #6a3a10, 0 0 0.7em rgba(255, 210, 90, 0.55);
+}
+.lv-sub { font-size: 0.7em; color: var(--muted); margin: 0.2em 0 0.9em; }
+.perk-list { display: flex; gap: 0.9em; justify-content: center; }
+.perk-card {
+  --perk-color: var(--gold);
+  position: relative;
+  width: 10.5em;
+  min-height: 12.5em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45em;
+  padding: 1em 0.7em 0.8em;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(36, 30, 51, 0.98), rgba(22, 18, 32, 0.98));
+  border: 0.15em solid var(--line);
+  box-shadow: inset 0 0 0 0.12em #120f1c, 0 0.3em 0 #0a0810;
+  transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+}
+.perk-card:hover, .perk-card:focus-visible {
+  transform: translateY(-0.3em);
+  border-color: var(--perk-color);
+  box-shadow: inset 0 0 0 0.12em #120f1c, 0 0.3em 0 #0a0810, 0 0 1.2em color-mix(in srgb, var(--perk-color) 55%, transparent);
+  outline: none;
+}
+.perk-card kbd { position: absolute; top: 0.4em; left: 0.4em; font-size: 0.6em; }
+.perk-icon {
+  width: 3em;
+  height: 3em;
+  image-rendering: pixelated;
+  padding: 0.3em;
+  background: #120f1c;
+  border: 0.12em solid var(--perk-color);
+  box-sizing: content-box;
+}
+.perk-card strong { font-size: 0.8em; color: var(--perk-color); }
+.perk-desc { font-size: 0.62em; color: #cfc8e4; flex: 1; }
+.perk-stack { font-size: 0.52em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+@keyframes fadein { from { opacity: 0; } }
+@keyframes pop { from { transform: scale(0.85); opacity: 0; } }
+@keyframes glowtext { to { text-shadow: 0 0 0.6em rgba(255, 226, 107, 0.8); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

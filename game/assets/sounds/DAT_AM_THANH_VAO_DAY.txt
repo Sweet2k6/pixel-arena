@@ -1,0 +1,3 @@
+Dat file am thanh (.wav/.mp3/.ogg) vao day,
+roi dien duong dan vao SOUND_MANIFEST trong game/main.js (muc 2).
+Vi du: shoot: "assets/sounds/shoot.wav"

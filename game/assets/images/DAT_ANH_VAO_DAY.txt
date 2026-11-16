@@ -1,0 +1,3 @@
+Dat anh cua ban (PNG nen trong suot) vao day,
+roi dien duong dan vao IMAGE_MANIFEST trong game/main.js (muc 2).
+Vi du: player: "assets/images/player.png"

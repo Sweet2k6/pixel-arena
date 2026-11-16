@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixel Arena</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- #stage bọc canvas + các màn hình HTML phủ lên trên (menu, game over). JS chỉnh kích thước theo cửa sổ. -->
+  <div id="stage">
+    <!-- Canvas chính: game vẽ ở độ phân giải pixel thấp (480x270) rồi được phóng to bằng CSS -->
+    <canvas id="game" width="480" height="270" tabindex="-1"></canvas>
+
+    <!-- ============================================================================
+         MÀN HÌNH CHÍNH (MENU) — ảnh nền đặt tại game/assets/menu-bg.png (xem style.css, mục #menu)
+         ============================================================================ -->
+    <section id="menu" class="screen hidden" aria-label="Màn hình chính">
+      <div class="torch torch-left" aria-hidden="true"></div>
+      <div class="torch torch-right" aria-hidden="true"></div>
+
+      <header class="menu-header">
+        <!-- Tên game: vẽ bằng font pixel trong main.js (MenuUI.buildTitle). Đổi chữ ở đó. -->
+        <canvas id="title-canvas" class="title-canvas" aria-label="Pixel Arena"></canvas>
+        <p class="subtitle">Chọn người hùng · Xông vào hầm ngục</p>
+      </header>
+
+      <div class="menu-body">
+        <!-- Khu vực chọn nhân vật: các thẻ nhân vật được tạo tự động từ CHARACTERS (characters.js) -->
+        <div class="showcase">
+          <div class="roster-row">
+            <button id="prev-btn" class="nav-arrow" type="button" aria-label="Nhân vật trước">&lt;</button>
+            <div id="roster" class="roster"></div>
+            <button id="next-btn" class="nav-arrow" type="button" aria-label="Nhân vật sau">&gt;</button>
+          </div>
+          <p class="hint">Click vào nhân vật · <kbd>&larr;</kbd> <kbd>&rarr;</kbd> để đổi · Nháy đúp để vào trận</p>
+        </div>
+
+        <!-- Bảng thông tin & kỹ năng (kiểu Soul Knight) — nội dung do main.js điền khi chọn nhân vật -->
+        <aside class="info-panel" aria-live="polite">
+          <div class="info-head">
+            <h2 id="info-name">—</h2>
+            <span id="info-title" class="info-title"></span>
+          </div>
+          <p id="info-desc" class="info-desc"></p>
+
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-label"><i class="ico ico-hp"></i>Máu</span>
+              <div class="stat-track"><div id="stat-hp" class="stat-fill fill-hp"></div></div>
+              <span id="stat-hp-val" class="stat-val">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label"><i class="ico ico-armor"></i>Giáp</span>
+              <div class="stat-track"><div id="stat-armor" class="stat-fill fill-armor"></div></div>
+              <span id="stat-armor-val" class="stat-val">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label"><i class="ico ico-speed"></i>Tốc độ</span>
+              <div class="stat-track"><div id="stat-speed" class="stat-fill fill-speed"></div></div>
+              <span id="stat-speed-val" class="stat-val">0</span>
+            </div>
+            <p class="stat-note">Giáp tự hồi phục nếu không nhận sát thương trong vài giây.</p>
+          </div>
+
+          <div class="slot-row">
+            <div class="slot-box weapon-box"><canvas id="weapon-icon" width="26" height="13"></canvas></div>
+            <div class="slot-text">
+              <span class="slot-kicker">Vũ khí khởi đầu</span>
+              <strong id="weapon-name">—</strong>
+              <span id="weapon-desc" class="slot-desc"></span>
+            </div>
+          </div>
+
+          <div class="slot-row skill-row">
+            <div class="slot-box skill-box"><canvas id="skill-icon" width="20" height="20"></canvas></div>
+            <div class="slot-text">
+              <span class="slot-kicker">Kỹ năng · <kbd>Space</kbd> / Chuột phải <span class="cd-badge">⏱ <span id="skill-cd">0s</span></span></span>
+              <strong id="skill-name">—</strong>
+              <span id="skill-desc" class="slot-desc"></span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="menu-footer">
+        <button id="mute-btn" class="btn-icon" type="button" aria-label="Bật/Tắt âm thanh">🔊</button>
+        <span class="controls">WASD di chuyển · Chuột trái tấn công · Space/Chuột phải kỹ năng · <kbd>Shift</kbd> lướt · <kbd>Q</kbd>/lăn chuột đổi súng · P tạm dừng · M tắt tiếng</span>
+
+        <!-- Bộ chọn BẢN ĐỒ (4 biome, định nghĩa trong src/world.js -> BIOMES). Phím ↑ ↓ cũng đổi được. -->
+        <div class="map-picker" aria-label="Chọn bản đồ">
+          <button id="map-prev" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ trước">&lt;</button>
+          <div class="map-info">
+            <canvas id="map-preview" width="40" height="22" aria-hidden="true"></canvas>
+            <div class="map-text">
+              <span class="slot-kicker">Bản đồ <kbd>↑</kbd><kbd>↓</kbd></span>
+              <strong id="map-name">—</strong>
+              <span id="map-desc" class="map-desc"></span>
+            </div>
+          </div>
+          <button id="map-next" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ sau">&gt;</button>
+        </div>
+
+        <button id="start-btn" class="btn-start" type="button">VÀO TRẬN<small>START</small></button>
+      </footer>
+    </section>
+
+    <!-- ============================================================================
+         GAME OVER — hiện khi nhân vật hết máu
+         ============================================================================ -->
+    <section id="gameover" class="screen hidden" aria-label="Thua cuộc">
+      <div class="go-card">
+        <h2 class="go-title">THẤT BẠI</h2>
+        <p class="go-sub"><span id="go-char"></span> đã gục ngã trong hầm ngục</p>
+        <p id="go-record" class="go-record hidden">★ KỶ LỤC MỚI ★</p>
+        <dl class="go-stats">
+          <div><dt>Điểm</dt><dd id="go-score">0</dd></div>
+          <div><dt>Kỷ lục</dt><dd id="go-best">0</dd></div>
+          <div><dt>Hạ gục</dt><dd id="go-kills">0</dd></div>
+          <div><dt>Sống sót</dt><dd id="go-time">0s</dd></div>
+          <div><dt>Map đã chơi</dt><dd id="go-map" class="dd-text">—</dd></div>
+          <div><dt>Cấp độ đạt được</dt><dd id="go-level">1</dd></div>
+          <div class="span-2"><dt>Vũ khí sử dụng</dt><dd id="go-weapons" class="dd-text">—</dd></div>
+        </dl>
+        <div class="go-buttons">
+          <button id="retry-btn" class="btn-start" type="button">CHƠI LẠI<small>Enter</small></button>
+          <button id="home-btn" class="btn-secondary" type="button">MÀN HÌNH CHÍNH<small>Esc</small></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================================
+         LÊN CẤP — chọn 1 trong 3 thẻ nâng cấp (game tạm dừng). Thẻ định nghĩa trong src/perks.js
+         ============================================================================ -->
+    <section id="levelup" class="screen hidden" aria-label="Lên cấp">
+      <div class="lv-card">
+        <h2 class="lv-title">LÊN CẤP <span id="lv-num">2</span>!</h2>
+        <p class="lv-sub">Chọn 1 thẻ nâng cấp · click hoặc phím <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <div id="perk-list" class="perk-list"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- characters.js + main.js là ES module (import thư viện pixelfx) nên phải chạy qua web server
+       (dùng Chay_Game.bat), không mở trực tiếp bằng file:// -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>

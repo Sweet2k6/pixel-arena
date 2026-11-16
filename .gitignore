@@ -1,0 +1,12 @@
+# Chỉ đưa lên GitHub phần thư viện pixelfx mà game cần (bỏ ảnh demo nặng, công cụ, gallery)
+pixelfx-main/docs/
+pixelfx-main/gallery/
+pixelfx-main/tools/
+pixelfx-main/skills/
+pixelfx-main/.claude-plugin/
+pixelfx-main/.github/
+pixelfx-main/package-lock.json
+node_modules/
+*.log
+Thumbs.db
+desktop.ini
