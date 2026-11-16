@@ -15,6 +15,7 @@ git config user.email >nul 2>nul || git config user.email "sweet2k6@users.norepl
 git add -A
 git diff --cached --quiet
 if errorlevel 1 git commit -q -m "Cap nhat Pixel Arena %date% %time%"
+git pull --rebase -q origin main >nul 2>nul
 git push -u origin main
 if errorlevel 1 goto fail
 echo.

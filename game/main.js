@@ -45,6 +45,7 @@ import { Chest, Pickup, ExpOrb, rollChest, CHEST_TIERS, ITEMS } from "./src/loot
 import { rollPerks, expToNext, PERK_ICONS } from "./src/perks.js";
 import { makeActor, drawHero } from "./src/actors.js";
 import * as HUD from "./src/hud.js";
+import { TouchControls, isTouchDevice } from "./src/touch.js";
 
 // =====================================================================================
 // 1. CẤU HÌNH
@@ -69,8 +70,11 @@ const PLAYER_CFG = {
 /** Kỹ năng Lướt Nhanh (Shift) — mọi nhân vật đều có */
 const ROLL = { distance: 140, time: 0.16, cooldown: 2.5, iframes: 0.25 };
 
+/** Đang chơi bằng cảm ứng (điện thoại / tablet) — laptop cảm ứng bật khi chạm màn hình lần đầu */
+let TOUCH = isTouchDevice();
+
 const SPAWN = {
-  maxEnemies: 46,
+  maxEnemies: TOUCH ? 38 : 46,   // điện thoại: bớt quái 1 chút cho mượt
   chestEvery: 25,       // giây: rương ngẫu nhiên xuất hiện
   maxChests: 4,
   bossEvery: 60,        // giây: Mini-Boss xuất hiện
@@ -108,6 +112,7 @@ const SOUND_MANIFEST = {
   // --- Chiến đấu ---
   shoot: "", punch: "", magicShoot: "",           // vũ khí khởi đầu của 3 nhân vật
   shotgun: "", laser: "", grenadeShoot: "", sword: "", // 4 vũ khí mới
+  flame: "", zap: "", catch: "",                       // phun lửa, súng sét, bắt boomerang
   hit: "", enemyDie: "", playerHurt: "", armorHit: "", gameOver: "",
   explosion: "",     // thùng nổ / lựu đạn
   deflect: "",       // kiếm chém rụng đạn
@@ -250,7 +255,7 @@ class SoundManager {
   play(name, volume = 0.5) {
     if (this.muted) return;
     const now = performance.now();
-    if (now - (this.lastPlay[name] ?? 0) < 30) return;
+    if (now - (this.lastPlay[name] ?? 0) < ({ flame: 110, shoot: 45 }[name] ?? 30)) return;
     this.lastPlay[name] = now;
     const s = this.sounds[name];
     if (s) { const a = s.cloneNode(); a.volume = volume; a.play().catch(() => {}); return; }
@@ -267,6 +272,9 @@ class SoundManager {
       laser:       { type: "sawtooth", f0: 1800, f1: 300,  dur: 0.16, vol: 0.12 },
       grenadeShoot:{ type: "square",   f0: 180,  f1: 420,  dur: 0.14, vol: 0.14 },
       sword:       { type: "triangle", f0: 1400, f1: 400,  dur: 0.12, vol: 0.14 },
+      flame:       { type: "sawtooth", f0: 90,   f1: 60,   dur: 0.14, vol: 0.10, noise: true },
+      zap:         { type: "square",   f0: 2400, f1: 200,  dur: 0.16, vol: 0.12, noise: true },
+      catch:       { type: "triangle", f0: 600,  f1: 900,  dur: 0.05, vol: 0.08 },
       hit:         { type: "square",   f0: 220,  f1: 90,   dur: 0.06, vol: 0.15 },
       enemyDie:    { type: "triangle", f0: 520,  f1: 60,   dur: 0.25, vol: 0.22 },
       playerHurt:  { type: "sawtooth", f0: 160,  f1: 50,   dur: 0.30, vol: 0.20 },
@@ -333,6 +341,8 @@ const input = {
   mouse: { x: W / 2, y: H / 2, left: false },   // tọa độ MÀN HÌNH (0..W, 0..H)
   pressed: new Set(),
   wheel: 0,
+  joy: { x: 0, y: 0 },   // cần di chuyển cảm ứng
+  touchAim: null,         // góc ngắm cảm ứng (null = không ngắm)
 };
 
 window.addEventListener("keydown", (e) => {
@@ -374,13 +384,48 @@ function worldMouse() {
   return cam ? { x: input.mouse.x + cam.x, y: input.mouse.y + cam.y } : { x: input.mouse.x, y: input.mouse.y };
 }
 
+/** Điểm đang ngắm (thế giới): chuột trên máy tính, hoặc theo hướng ngắm của nhân vật trên điện thoại */
+function aimPoint(p) {
+  if (!TOUCH) return worldMouse();
+  return { x: p.cx + Math.cos(p.aim) * 120, y: p.cy + Math.sin(p.aim) * 120 };
+}
+
+// ---------- Điện thoại: chặn cuộn/zoom, vừa khít màn hình ngang ----------
+function enableTouchMode() {
+  if (TOUCH && document.body.classList.contains("is-touch")) return;
+  TOUCH = true;
+  document.body.classList.add("is-touch");
+  fitCanvas();
+}
+window.addEventListener("touchstart", () => enableTouchMode(), { once: true, passive: true });
+const isPortrait = () => window.innerHeight > window.innerWidth;
+
+/** Toàn màn hình + khóa xoay ngang (Android Chrome hỗ trợ; iPhone bỏ qua an toàn) */
+function goFullscreenLandscape() {
+  if (!TOUCH) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen ?? el.webkitRequestFullscreen;
+  if (!document.fullscreenElement && req) {
+    Promise.resolve(req.call(el, { navigationUI: "hide" }))
+      .then(() => screen.orientation?.lock?.("landscape"))
+      .catch(() => {});
+  }
+}
+
 function fitCanvas() {
-  const scale = Math.max(1, Math.floor(Math.min((window.innerWidth - 16) / W, (window.innerHeight - 44) / H)));
+  const vw = window.visualViewport?.width ?? window.innerWidth, vh = window.visualViewport?.height ?? window.innerHeight;
+  // Máy tính: phóng to theo bội số nguyên cho pixel sắc nét. Điện thoại: phóng vừa khít toàn màn hình.
+  const scale = TOUCH
+    ? Math.max(0.5, Math.min(vw / W, vh / H))
+    : Math.max(1, Math.floor(Math.min((vw - 16) / W, (vh - 44) / H)));
   canvas.style.width = `${W * scale}px`;
   canvas.style.height = `${H * scale}px`;
   stage.style.fontSize = `${(W * scale) / 60}px`;
 }
 window.addEventListener("resize", fitCanvas);
+window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 250));
+window.visualViewport?.addEventListener("resize", fitCanvas);
+if (TOUCH) document.body.classList.add("is-touch");
 fitCanvas();
 
 // =====================================================================================
@@ -424,7 +469,7 @@ const SKILL_HANDLERS = {
   },
   /** LƯỚT XUNG KÍCH: lao về phía con trỏ (tọa độ thế giới), bất tử khi lướt, hất tung kẻ địch */
   dash(p, game, s) {
-    const m = worldMouse();
+    const m = aimPoint(p);
     const a = Math.atan2(m.y - p.cy, m.x - p.cx);
     p.dash = { t: 0, dur: s.dashTime, vx: Math.cos(a) * s.dashSpeed, vy: Math.sin(a) * s.dashSpeed, angle: a, hit: new Set(), trail: 0 };
     p.kx = p.ky = 0;
@@ -483,6 +528,7 @@ class Player {
     this.roll = null; this.rollCd = 0; this.rollCdMax = ROLL.cooldown; this.rollInv = 0;
     this.ghosts = [];
     // --- Hiệu ứng tạm thời ---
+    this.spin = 0;         // Súng Máy Gatling: độ quay nòng 0..1
     this.frenzy = 0;       // Thuốc Cuồng Nộ
     this.acidTick = 0;     // thời gian đứng trong axit
     this.inAcid = false;
@@ -513,9 +559,9 @@ class Player {
     this.updateArmor(dt);
     if (this.rageTime > 0) { this.rageTime -= dt; if (this.rageTime <= 0) { this.rageTime = 0; this.aura?.stop(); } }
 
-    // --- Ngắm theo chuột (TỌA ĐỘ THẾ GIỚI) ---
-    const m = worldMouse();
-    this.aim = Math.atan2(m.y - this.cy, m.x - this.cx);
+    // --- Ngắm: chuột (TỌA ĐỘ THẾ GIỚI) hoặc cần ngắm cảm ứng ---
+    if (TOUCH) this.aim = this.touchAim(game);
+    else { const m = worldMouse(); this.aim = Math.atan2(m.y - this.cy, m.x - this.cx); }
 
     // --- Đổi vũ khí: Q / lăn chuột / phím 1-2 ---
     if (input.pressed.has("q") || input.wheel !== 0) this.swapWeapon(game);
@@ -540,8 +586,10 @@ class Player {
     if (input.keys.has("s") || input.keys.has("arrowdown")) dy += 1;
     if (input.keys.has("a") || input.keys.has("arrowleft")) dx -= 1;
     if (input.keys.has("d") || input.keys.has("arrowright")) dx += 1;
-    const len = Math.hypot(dx, dy);
-    if (len) { dx /= len; dy /= len; }
+    dx += input.joy.x; dy += input.joy.y;           // cần di chuyển cảm ứng (có lực nhẹ / mạnh)
+    let len = Math.hypot(dx, dy);
+    if (len < 0.15) { dx = dy = 0; len = 0; }
+    if (len > 1) { dx /= len; dy /= len; len = 1; }
 
     if (input.pressed.has("shift") && !this.dash) this.startRoll(game, dx, dy);
 
@@ -557,6 +605,11 @@ class Player {
     }
     this.kx *= Math.pow(0.001, dt); this.ky *= Math.pow(0.001, dt);
 
+    // --- Súng máy: giữ cò thì nòng quay nhanh dần, thả ra thì chậm lại ---
+    const firing = input.mouse.left && !this.dash && !this.roll;
+    if (this.weapon.spinUp) this.spin = clamp(this.spin + (firing ? dt / this.weapon.spinUp : -dt * 1.5), 0, 1);
+    else this.spin = 0;
+
     // --- Tấn công & kỹ năng ---
     if (input.mouse.left && this.fireTimer <= 0 && !this.dash && !this.roll) this.attack(game);
     if (input.pressed.has(" ") || input.pressed.has("mouse2")) this.useSkill(game);
@@ -568,6 +621,28 @@ class Player {
       this.aura.update(dt);
       if (this.aura.done()) this.aura = null;
     }
+  }
+
+  /**
+   * Hướng ngắm trên điện thoại: theo cần ngắm (có hỗ trợ ngắm: hút về quái gần hướng kéo trong 22°),
+   * không kéo cần ngắm thì nhìn theo hướng di chuyển.
+   */
+  touchAim(game) {
+    const a = input.touchAim;
+    if (a === null) {
+      const jx = input.joy.x, jy = input.joy.y;
+      return Math.hypot(jx, jy) > 0.3 ? Math.atan2(jy, jx) : this.aim;
+    }
+    let best = null, bs = Infinity;
+    for (const e of game.enemies) {
+      const d = Math.hypot(e.cx - this.cx, e.cy - this.cy);
+      if (d > 260) continue;
+      const da = Math.abs(angleDiff(Math.atan2(e.cy - this.cy, e.cx - this.cx), a));
+      if (da > 0.38) continue;
+      const score = da * 300 + d;
+      if (score < bs) { bs = score; best = e; }
+    }
+    return best ? Math.atan2(best.cy - this.cy, best.cx - this.cx) : a;
   }
 
   /** Giáp tự hồi: chờ `regen.delay` giây không trúng đòn rồi hồi 1 điểm mỗi `regen.interval` giây */
@@ -608,6 +683,7 @@ class Player {
     let rateMul = 1;
     if (this.rageTime > 0) rateMul *= this.skill.fireRateMult ?? 0.5;  // kỹ năng Cuồng Nộ
     if (this.frenzy > 0) rateMul /= 1.4;                               // Thuốc Cuồng Nộ +40% tốc bắn
+    if (w.spinUp) rateMul *= 4 - 3 * this.spin;                        // Gatling: chậm gấp 4 lúc mới quay
     this.fireTimer = w.fireRate * rateMul;
     if (w.type === "melee" || w.type === "sword") meleeSwing(this, game, w);
     else fireWeapon(this, game, w);
@@ -644,6 +720,7 @@ class Player {
   startRoll(game, dx, dy) {
     if (this.rollCd > 0 || this.roll) return;
     if (!dx && !dy) { dx = Math.cos(this.aim); dy = Math.sin(this.aim); }   // đứng yên: lướt theo hướng ngắm
+    const l = Math.hypot(dx, dy); dx /= l; dy /= l;                        // cần cảm ứng nghiêng nhẹ vẫn lướt đủ 140px
     const v = ROLL.distance / ROLL.time;
     this.roll = { t: 0, vx: dx * v, vy: dy * v, trail: 0 };
     this.rollCd = this.rollCdMax;
@@ -675,7 +752,7 @@ class Player {
     this.armor -= absorbed;
     const toHp = dmg - absorbed;
     this.hp = Math.max(0, this.hp - toHp);
-    if (toHp > 0) { game.shake(0.28, 5); game.hitStop(0.08); game.sound.play("playerHurt", 0.6); game.hurtFlash = 0.25; }
+    if (toHp > 0) { navigator.vibrate?.(70); game.shake(0.28, 5); game.hitStop(0.08); game.sound.play("playerHurt", 0.6); game.hurtFlash = 0.25; }
     else { this.armorFlash = 0.3; game.shake(0.16, 3); game.hitStop(0.04); game.sound.play("armorHit", 0.5); }
     FX.hit(this.cx, this.cy, a);
   }
@@ -760,6 +837,7 @@ class Game {
     input.pressed.clear();
     this.ui.hideAll();
     this.sound.unlock();
+    goFullscreenLandscape();
     this.sound.play("uiStart", 0.6);
     this.sound.setMusic("music");
     canvas.focus();
@@ -797,7 +875,7 @@ class Game {
     this.camera.snap(this.player.x, this.player.cy);
     this.bullets = []; this.enemyBullets = []; this.enemies = [];
     this.chests = []; this.pickups = []; this.orbs = [];
-    this.beams = []; this.waves = []; this.shocks = []; this.flashes = []; this.banners = [];
+    this.beams = []; this.waves = []; this.shocks = []; this.flashes = []; this.banners = []; this.bolts = [];
     this.weaponsUsed = new Set([char.weapon.name]);
     this.score = 0; this.kills = 0; this.time = 0;
     this.level = 1; this.exp = 0; this.expNeed = expToNext(1); this.pendingLevels = 0;
@@ -904,10 +982,12 @@ class Game {
     const km = e.boss ? 0.12 : 1;
     e.kx += Math.cos(angle) * knock * km;
     e.ky += Math.sin(angle) * knock * km;
-    FX.hit(e.cx, e.cy, angle);
-    FX.damage(e.cx, e.cy - 10, dmg);
-    this.sound.play("hit", 0.4);
-    this.hitStop(0.03);
+    if (!opts.quiet) {
+      FX.hit(e.cx, e.cy, angle);
+      this.sound.play("hit", 0.4);
+      this.hitStop(0.03);
+    }
+    if (!opts.quiet || Math.random() < 0.3) FX.damage(e.cx, e.cy - 10, dmg);
     if (e.hp <= 0) this.killEnemy(e);
   }
 
@@ -1024,6 +1104,7 @@ class Game {
 
   // ---------- UPDATE ----------
   update(dt) {
+    this.touch?.sync(this, TOUCH && this.state === GAME_STATE.PLAYING);
     if (input.pressed.has("m")) this.ui.toggleMute();
     if (input.pressed.has("h")) this.debug = !this.debug;
     switch (this.state) {
@@ -1053,7 +1134,8 @@ class Game {
       return;
     }
     if (input.pressed.has("p") || input.pressed.has("escape")) this.paused = !this.paused;
-    if (this.paused) { if (input.pressed.has("q")) this.goMenu(); return; }
+    if (TOUCH && isPortrait()) this.paused = true;   // cầm dọc điện thoại: tự tạm dừng, chờ xoay ngang
+    if (this.paused) { if (input.pressed.has("q") && !TOUCH) this.goMenu(); return; }
 
     this.camera.updateShake(dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
@@ -1093,11 +1175,11 @@ class Game {
     for (const b of this.bullets) {
       if (b.dead) continue;
       for (const e of this.enemies) {
-        if (e.dead || e.spawnTime > 0.2) continue;
+        if (e.dead || e.spawnTime > 0.2 || !b.canHit(e)) continue;
         if (circleHit(b.x, b.y, b.radius, e.cx, e.cy, e.radius)) {
-          this.damageEnemy(e, b.damage, b.angle, b.knock);
-          b.finish(this);
-          break;
+          const keepFlying = b.onHitEnemy(e, this);   // đốt / làm chậm / xuyên
+          this.damageEnemy(e, b.damage, Math.atan2(b.vy, b.vx), b.knock, { quiet: b.style === "flame" });
+          if (!keepFlying) { b.finish(this); break; }
         }
       }
     }
@@ -1139,7 +1221,7 @@ class Game {
     for (const o of this.orbs) o.update(dt, this);
 
     // --- Hiệu ứng ngắn ---
-    for (const list of [this.beams, this.waves, this.shocks, this.flashes, this.banners]) for (const b of list) b.life -= dt;
+    for (const list of [this.beams, this.waves, this.shocks, this.flashes, this.banners, this.bolts]) for (const b of list) b.life -= dt;
 
     this.bullets = this.bullets.filter((b) => !b.dead);
     this.enemyBullets = this.enemyBullets.filter((b) => !b.dead);
@@ -1148,6 +1230,7 @@ class Game {
     this.pickups = this.pickups.filter((pk) => !pk.dead);
     this.orbs = this.orbs.filter((o) => !o.dead);
     this.beams = this.beams.filter((b) => b.life > 0);
+    this.bolts = this.bolts.filter((b) => b.life > 0);
     this.waves = this.waves.filter((b) => b.life > 0);
     this.shocks = this.shocks.filter((b) => b.life > 0);
     this.flashes = this.flashes.filter((b) => b.life > 0);
@@ -1155,7 +1238,7 @@ class Game {
     this.updateFx(dt);
 
     // --- Camera bám theo, nhìn hơi lệch theo hướng chuột ---
-    const m = worldMouse();
+    const m = aimPoint(p);
     this.camera.follow(p.x, p.cy, dt, clamp((m.x - p.x) * 0.18, -40, 40), clamp((m.y - p.cy) * 0.18, -26, 26));
 
     if (p.hp <= 0) this.gameOver();
@@ -1242,7 +1325,7 @@ class Game {
     if (this.hurtFlash > 0) { ctx.fillStyle = `rgba(200,20,40,${this.hurtFlash * 0.6})`; ctx.fillRect(0, 0, W, H); }
     if (this.player.inAcid) { ctx.fillStyle = "rgba(60,200,40,0.10)"; ctx.fillRect(0, 0, W, H); }
     this.drawHUD();
-    if (alive && !this.paused && !this.choosing) this.drawCrosshair();
+    if (alive && !this.paused && !this.choosing) { if (TOUCH) this.drawAimGuide(); else this.drawCrosshair(); }
   }
 
   drawBeams() {
@@ -1254,6 +1337,14 @@ class Game {
       ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x1, b.y1); ctx.stroke();
       ctx.strokeStyle = withAlpha("#ffffff", k); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(b.x0, b.y0); ctx.lineTo(b.x1, b.y1); ctx.stroke();
+    }
+    // tia sét xích (Súng Sét Xích)
+    for (const b of this.bolts) {
+      const k = b.life / b.max;
+      for (const [w, col, a] of [[4, b.color, 0.3], [2, b.color, 1], [1, "#ffffff", 1]]) {
+        ctx.strokeStyle = withAlpha(col, a * k); ctx.lineWidth = w;
+        ctx.beginPath(); b.pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
+      }
     }
     // sóng kiếm khí hình bán nguyệt
     for (const s of this.waves) {
@@ -1308,7 +1399,7 @@ class Game {
 
     // 2 ô vũ khí + Lướt
     HUD.drawWeaponSlots(ctx, X, Y + 32, p, this.time);
-    HUD.drawDashPip(ctx, X + 1, Y + 61, p);
+    HUD.drawDashPip(ctx, X + 1, Y + 61, p, TOUCH ? "LƯỚT" : "SHIFT LƯỚT");
     let fy = Y + 70;
     ctx.font = "7px monospace";
     if (p.frenzy > 0) { HUD.text(ctx, `CUỒNG NỘ ${p.frenzy.toFixed(1)}s`, X + 1, fy, "#ff8a2a"); fy += 9; }
@@ -1331,7 +1422,11 @@ class Game {
     HUD.drawBanners(ctx, W, H, this.banners);
     if (this.debug) HUD.text(ctx, `fx: ${activeFx.length}  quái: ${this.enemies.length}  đạn: ${this.bullets.length}`, 6, H - 12, "#8f8");
 
-    if (this.paused) this.overlay("TẠM DỪNG", "P / Esc: tiếp tục", "Q: về Màn hình chính");
+    if (this.paused) {
+      if (TOUCH && isPortrait()) this.overlay("XOAY NGANG", "Xoay ngang điện thoại để chơi tiếp", "");
+      else if (TOUCH) { ctx.fillStyle = "rgba(10,8,18,0.6)"; ctx.fillRect(0, 0, W, H); }   // nút Tiếp tục là HTML
+      else this.overlay("TẠM DỪNG", "P / Esc: tiếp tục", "Q: về Màn hình chính");
+    }
   }
 
   drawSkillSlot(x, y, p) {
@@ -1367,6 +1462,23 @@ class Game {
     ctx.font = "10px monospace"; HUD.text(ctx, line1, W / 2, H / 2 + 2, "#ffe26b");
     HUD.text(ctx, line2, W / 2, H / 2 + 18, "#b8b0d0");
     ctx.textAlign = "left"; ctx.font = "8px monospace";
+  }
+
+  /** Điện thoại: mũi tên hướng ngắm quanh nhân vật thay cho tâm ngắm chuột */
+  drawAimGuide() {
+    const p = this.player, cam = this.camera;
+    const sx = p.cx - cam.rx, sy = p.cy - cam.ry, a = p.aim, aiming = input.touchAim !== null;
+    ctx.fillStyle = aiming ? "rgba(255,226,107,0.85)" : "rgba(255,255,255,0.35)";
+    for (let i = 0; i < 4; i++) {
+      const d = 20 + i * 7;
+      ctx.fillRect(Math.round(sx + Math.cos(a) * d) - 1, Math.round(sy + Math.sin(a) * d) - 1, 2, 2);
+    }
+    const tx = sx + Math.cos(a) * 50, ty = sy + Math.sin(a) * 50;
+    ctx.beginPath();
+    ctx.moveTo(tx + Math.cos(a) * 4, ty + Math.sin(a) * 4);
+    ctx.lineTo(tx + Math.cos(a + 2.4) * 4, ty + Math.sin(a + 2.4) * 4);
+    ctx.lineTo(tx + Math.cos(a - 2.4) * 4, ty + Math.sin(a - 2.4) * 4);
+    ctx.closePath(); ctx.fill();
   }
 
   drawCrosshair() {
@@ -1675,6 +1787,10 @@ async function main() {
 
   game = new Game(assets, new SoundManager(assets.sounds));
   game.ui = new MenuUI(game);
+  game.touch = new TouchControls(stage, input, {
+    press: (k) => { game.sound.unlock(); input.pressed.add(k); },
+    goMenu: () => game.goMenu(),
+  });
   window.game = game; // tiện debug trong Console (F12)
 
   if (AUTOPLAY) {

@@ -2,7 +2,14 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <!-- Điện thoại: chạy toàn màn hình khi "Thêm vào màn hình chính", ưu tiên màn hình NGANG -->
+  <meta name="theme-color" content="#0d0b14" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pixel Arena" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <title>Pixel Arena</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -85,7 +92,8 @@
 
       <footer class="menu-footer">
         <button id="mute-btn" class="btn-icon" type="button" aria-label="Bật/Tắt âm thanh">🔊</button>
-        <span class="controls">WASD di chuyển · Chuột trái tấn công · Space/Chuột phải kỹ năng · <kbd>Shift</kbd> lướt · <kbd>Q</kbd>/lăn chuột đổi súng · P tạm dừng · M tắt tiếng</span>
+        <span class="controls controls-touch">Cần trái: di chuyển · Cần phải: ngắm &amp; bắn · Nút bên phải: Kỹ năng / Lướt / Đổi súng</span>
+        <span class="controls controls-desktop">WASD di chuyển · Chuột trái tấn công · Space/Chuột phải kỹ năng · <kbd>Shift</kbd> lướt · <kbd>Q</kbd>/lăn chuột đổi súng · P tạm dừng · M tắt tiếng</span>
 
         <!-- Bộ chọn BẢN ĐỒ (4 biome, định nghĩa trong src/world.js -> BIOMES). Phím ↑ ↓ cũng đổi được. -->
         <div class="map-picker" aria-label="Chọn bản đồ">
@@ -139,6 +147,13 @@
         <div id="perk-list" class="perk-list"></div>
       </div>
     </section>
+  </div>
+
+  <!-- Điện thoại cầm DỌC: nhắc xoay ngang -->
+  <div id="rotate" class="rotate-hint" aria-live="polite">
+    <div class="rotate-phone"></div>
+    <p>Xoay ngang điện thoại để chơi</p>
+    <small>Pixel Arena chơi tốt nhất ở màn hình ngang</small>
   </div>
 
   <!-- characters.js + main.js là ES module (import thư viện pixelfx) nên phải chạy qua web server

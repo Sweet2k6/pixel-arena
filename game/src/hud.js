@@ -79,10 +79,10 @@ export function drawWeaponSlots(ctx, x, y, p, time) {
 }
 
 /** Chỉ báo Lướt (Shift) — thanh hồi chiêu nhỏ */
-export function drawDashPip(ctx, x, y, p) {
+export function drawDashPip(ctx, x, y, p, label = "SHIFT LƯỚT") {
   const k = 1 - p.rollCd / p.rollCdMax;
   ctx.font = "7px monospace"; ctx.textBaseline = "top";
-  text(ctx, "SHIFT LƯỚT", x, y, k >= 1 ? "#5fdc8c" : "#6a628a");
+  text(ctx, label, x, y, k >= 1 ? "#5fdc8c" : "#6a628a");
   ctx.fillStyle = "#000"; ctx.fillRect(x + 45, y + 2, 32, 4);
   ctx.fillStyle = "#2a2338"; ctx.fillRect(x + 46, y + 3, 30, 2);
   ctx.fillStyle = k >= 1 ? "#5fdc8c" : "#3a7a54"; ctx.fillRect(x + 46, y + 3, Math.round(30 * clamp(k, 0, 1)), 2);

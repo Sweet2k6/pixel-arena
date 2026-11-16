@@ -569,3 +569,125 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* =====================================================================================
+   ĐIỆN THOẠI / CẢM ỨNG — chỉ áp dụng khi body có class "is-touch" (main.js tự bật)
+   ===================================================================================== */
+.controls-touch { display: none; }
+body.is-touch .controls-desktop { display: none; }
+body.is-touch .controls-touch { display: inline; }
+body.is-touch .hint { display: none; }
+
+body.is-touch,
+body.is-touch #stage {
+  touch-action: none;                 /* chặn cuộn / zoom bằng 2 ngón */
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.is-touch #stage { box-shadow: none; }
+body.is-touch { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+body.is-touch button { touch-action: manipulation; }
+
+.touch-ui { position: absolute; inset: 0; z-index: 5; line-height: 1.1; }
+.tz { position: absolute; top: 0; bottom: 0; }
+.tz-left { left: 0; width: 50%; }
+.tz-right { right: 0; width: 50%; }
+
+/* Cần điều khiển nổi */
+.stick {
+  position: absolute;
+  width: 6.8em; height: 6.8em;
+  margin: -3.4em 0 0 -3.4em;
+  border-radius: 50%;
+  border: 0.15em solid rgba(255, 226, 107, 0.45);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, rgba(12, 10, 20, 0.35) 70%);
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.stick .knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 2.8em; height: 2.8em;
+  margin: -1.4em 0 0 -1.4em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff6c4, var(--gold) 45%, var(--gold-dark));
+  box-shadow: 0 0 0 0.15em #3a1a08, 0 0.2em 0.6em rgba(0, 0, 0, 0.5);
+}
+.stick-aim { border-color: rgba(255, 90, 90, 0.5); }
+.stick-aim .knob { background: radial-gradient(circle at 35% 35%, #ffd0d0, #ff5a5a 45%, #8a1e1e); }
+.stick.idle { opacity: 0.38; }
+.stick.active { opacity: 1; }
+.stick-move.idle { left: 13%; top: 74%; }
+.stick-aim.idle { left: 72%; top: 70%; }
+.stick-label {
+  position: absolute; left: 50%; top: 104%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.5em; font-weight: 800; letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.7);
+}
+.stick.active .stick-label { display: none; }
+
+/* Nút bấm cột phải */
+.tbtn {
+  --cd: 0;
+  position: absolute;
+  right: 1.2em;
+  width: 4.6em; height: 4.6em;
+  border-radius: 50%;
+  display: grid; place-content: center;
+  font-size: 1em; font-weight: 900; color: #fff;
+  background: radial-gradient(circle at 35% 30%, rgba(80, 66, 120, 0.9), rgba(20, 16, 32, 0.88));
+  border: 0.14em solid var(--line);
+  box-shadow: 0 0.2em 0 #0a0810;
+  overflow: hidden;
+}
+.tbtn small { display: block; font-size: 0.42em; letter-spacing: 0.08em; color: var(--muted); }
+.tbtn.down { transform: translateY(0.12em) scale(0.95); filter: brightness(1.3); }
+.tbtn .cd {  /* lớp tối quét hồi chiêu */
+  position: absolute; inset: 0;
+  background: conic-gradient(rgba(8, 6, 14, 0.75) calc(var(--cd) * 360deg), transparent 0);
+  pointer-events: none;
+}
+.t-pause { top: 19%; width: 2.8em; height: 2.8em; font-size: 0.8em; right: 1.5em; }
+.t-swap { top: 31%; }
+.t-skill { top: 49%; width: 5.4em; height: 5.4em; right: 0.8em; border-color: var(--skill, var(--gold)); font-size: 1.15em; color: var(--skill, var(--gold)); }
+.t-dash { top: 49%; right: 7.6em; color: #5fdc8c; border-color: #3a7a54; }
+.tbtn.disabled { opacity: 0.35; }
+
+.t-pausemenu {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.8em;
+  background: rgba(10, 8, 18, 0.55);
+  z-index: 2;
+}
+.t-pausemenu p { font-size: 2em; font-weight: 900; letter-spacing: 0.12em; color: #fff; }
+.t-pausemenu.hidden { display: none; }
+
+/* Nhắc xoay ngang khi cầm dọc */
+.rotate-hint {
+  display: none;
+  position: fixed; inset: 0; z-index: 50;
+  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: var(--bg);
+  color: var(--text);
+  text-align: center;
+  padding: 24px;
+}
+.rotate-hint p { font-size: 20px; font-weight: 800; color: var(--gold); }
+.rotate-hint small { font-size: 13px; color: var(--muted); }
+.rotate-phone {
+  width: 54px; height: 92px;
+  border: 5px solid var(--gold);
+  border-radius: 10px;
+  box-shadow: 0 0 18px rgba(255, 226, 107, 0.4);
+  animation: rotate-phone 1.8s ease-in-out infinite;
+}
+@keyframes rotate-phone { 0%, 20% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+@media (orientation: portrait) {
+  body.is-touch .rotate-hint { display: flex; }
+  body.is-touch #stage { visibility: hidden; }
+}

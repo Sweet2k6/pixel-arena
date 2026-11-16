@@ -1,0 +1,12 @@
+{
+  "name": "Pixel Arena",
+  "short_name": "Pixel Arena",
+  "description": "Game đấu trường sinh tồn pixel art 2D",
+  "lang": "vi",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0d0b14",
+  "theme_color": "#0d0b14"
+}

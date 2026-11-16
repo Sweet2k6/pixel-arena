@@ -56,6 +56,8 @@ export class Enemy {
     this.fuse = -1;                    // Dơi Cảm Tử: đếm ngược phát nổ
     this.aimAngle = 0;
     this.strafe = Math.random() < 0.5 ? 1 : -1;
+    this.burnT = 0; this.burnTick = 0;  // đang cháy (Súng Phun Lửa): 1 sát thương / giây
+    this.slowT = 0;                      // đang bị làm chậm (Cung Băng)
 
     if (t.kind === "hero") {
       this.actor = makeActor({ fallback: t.look });
@@ -98,7 +100,15 @@ export class Enemy {
     const dx = p.cx - this.cx, dy = p.cy - this.cy;
     const d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d;
-    const speedMul = game.slowMul ?? 1;
+    // hiệu ứng trạng thái
+    this.slowT = Math.max(0, this.slowT - dt);
+    const speedMul = this.slowT > 0 ? (this.boss ? 0.75 : 0.5) : 1;
+    this.speedMul = speedMul;
+    if (this.burnT > 0) {
+      this.burnT -= dt;
+      this.burnTick -= dt;
+      if (this.burnTick <= 0) { this.burnTick = 0.5; game.damageEnemy(this, 0.5, 0, 0, { quiet: true, pierce: true }); if (this.dead) return; }
+    }
 
     if (this.air) {
       this.air.t += dt;
@@ -138,7 +148,7 @@ export class Enemy {
   // ---------- Dơi Cảm Tử ----------
   updateBat(dt, game, d, ux, uy) {
     if (this.fuse < 0) {
-      this.steer(game, ux, uy, this.cfg.speed * (game.slowMul ?? 1), dt);
+      this.steer(game, ux, uy, this.cfg.speed * (this.speedMul ?? 1), dt);
       if (d < this.cfg.armRange + game.player.radius && this.spawnTime <= 0) {
         this.fuse = this.cfg.fuse;
         game.sound.play("batArm", 0.5);
@@ -172,7 +182,7 @@ export class Enemy {
     if (d > c.keep + 30) { mx = ux; my = uy; }
     else if (d < c.keep - 40) { mx = -ux; my = -uy; }
     else { mx = -uy * this.strafe; my = ux * this.strafe; if (Math.random() < dt * 0.4) this.strafe *= -1; }
-    this.steer(game, mx, my, c.speed * (game.slowMul ?? 1), dt);
+    this.steer(game, mx, my, c.speed * (this.speedMul ?? 1), dt);
     if (this.reload <= 0 && d < c.sight && this.spawnTime <= 0 && game.world.lineOfSight(this.cx, this.cy, p.cx, p.cy)) {
       this.state = "aim";
       this.stateTime = c.aimTime;
@@ -185,7 +195,7 @@ export class Enemy {
     const c = this.cfg;
     switch (this.state) {
       case "move":
-        this.steer(game, ux, uy, c.speed, dt);
+        this.steer(game, ux, uy, c.speed * (this.speedMul ?? 1), dt);
         if (this.stateTime <= 0) {
           this.attack = this.attack === "ring" ? "charge" : "ring";
           if (this.attack === "ring") { this.state = "ring"; this.volley = 3; this.stateTime = 0.25; }
@@ -306,6 +316,22 @@ export class Enemy {
         const ray = game.world.raycast(this.cx, this.cy, this.cx + Math.cos(a) * 420, this.cy + Math.sin(a) * 420);
         c.beginPath(); c.moveTo(this.cx + 0.5, this.cy + 0.5); c.lineTo(this.cx + Math.cos(a) * 420 * ray.t + 0.5, this.cy + Math.sin(a) * 420 * ray.t + 0.5); c.stroke();
       }
+    }
+    // Đang cháy: lưỡi lửa nhảy múa trên thân
+    if (this.burnT > 0) {
+      for (let i = 0; i < 4; i++) {
+        const fx = this.cx + Math.sin(game.time * 13 + i * 2.1) * this.radius * 0.7, h = 2 + ((game.time * 20 + i * 5) % 5);
+        c.fillStyle = i % 2 ? "#ffc23d" : "#ff6a1e";
+        c.fillRect(Math.round(fx), Math.round(this.cy - this.radius * 0.3 - h), 2, Math.round(h));
+      }
+    }
+    // Bị làm chậm: phủ băng xanh + bông tuyết
+    if (this.slowT > 0) {
+      c.fillStyle = "rgba(124,216,255,0.28)";
+      c.beginPath(); c.arc(this.cx, this.cy, this.radius + 1, 0, TAU); c.fill();
+      c.fillStyle = "#e8f8ff";
+      const sx = Math.round(this.cx + this.radius * 0.6), sy = Math.round(this.cy - this.radius);
+      c.fillRect(sx - 1, sy, 3, 1); c.fillRect(sx, sy - 1, 1, 3);
     }
     // Dơi Cảm Tử nhấp nháy đỏ trước khi nổ
     if (this.fuse >= 0 && Math.floor(this.fuse * 20) % 2 === 0) {
