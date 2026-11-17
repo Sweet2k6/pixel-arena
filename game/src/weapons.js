@@ -5,7 +5,8 @@
 //  File này thêm 4 vũ khí nhặt từ Rương: "shotgun" | "laser" | "grenade" | "sword".
 //  Muốn chỉnh chỉ số (sát thương, tốc độ bắn...): sửa trong WEAPONS bên dưới.
 // =====================================================================================
-import { angleDiff, circleHit, pointSegDist, withAlpha, rand } from "./util.js";
+import { angleDiff, circleHit, pointSegDist2, withAlpha, rand } from "./util.js";
+import { Pool } from "./pool.js";
 
 export const WEAPONS = {
   shotgun: {
@@ -73,7 +74,7 @@ export const RARE_WEAPONS = ["laser", "grenade", "minigun", "lightning"];
 
 /** Độ dài nòng (tính từ tâm thân) theo loại vũ khí */
 export function muzzleLength(w) {
-  return { magic: 22, shotgun: 19, laser: 19, grenade: 18, sword: 20, melee: 14, minigun: 20, flamethrower: 18, frostbow: 12, boomerang: 10, lightning: 18 }[w.type] ?? 16;
+  return { frostHand: 5, magic: 22, shotgun: 19, laser: 19, grenade: 18, sword: 20, melee: 14, minigun: 20, flamethrower: 18, frostbow: 12, boomerang: 10, lightning: 18 }[w.type] ?? 16;
 }
 
 // =====================================================================================
@@ -82,6 +83,12 @@ export function muzzleLength(w) {
 export function drawWeaponFallback(c, weapon) {
   const col = weapon.color;
   switch (weapon.type) {
+    case "frostHand":       // tay không: icon gai băng (trên tay nhân vật chỉ là đốm băng sáng, xem main.js)
+      c.fillStyle = "#2c58aa"; c.fillRect(0, -1, 12, 3);
+      c.fillStyle = "#a6ecff"; c.fillRect(1, -1, 10, 2); c.fillRect(11, 0, 2, 1);
+      c.fillStyle = "#ffffff"; c.fillRect(2, -1, 7, 1); c.fillRect(13, 0, 1, 1);
+      c.fillStyle = "#62c8f4"; c.fillRect(3, -3, 1, 2); c.fillRect(6, 2, 1, 2);
+      break;
     case "melee":           // găng tay sắt
       c.fillStyle = "#3a2a20"; c.fillRect(0, -3, 4, 6);
       c.fillStyle = "#8a8fa8"; c.fillRect(3, -4, 7, 8);
@@ -174,7 +181,7 @@ export function drawWeaponFallback(c, weapon) {
 
 /** Bề ngang hình vẽ thay thế [trái, phải] để căn giữa icon */
 export function weaponSpan(w) {
-  return { gun: [0, 13], melee: [0, 10], magic: [-2, 20], shotgun: [-3, 18], laser: [0, 19], grenade: [0, 16], sword: [-2, 23],
+  return { frostHand: [0, 14], gun: [0, 13], melee: [0, 10], magic: [-2, 20], shotgun: [-3, 18], laser: [0, 19], grenade: [0, 16], sword: [-2, 23],
     minigun: [-2, 20], flamethrower: [-2, 18], frostbow: [0, 10], boomerang: [0, 10], lightning: [0, 18] }[w.type] ?? [0, 13];
 }
 
@@ -182,8 +189,11 @@ export function weaponSpan(w) {
 //  ĐẠN CỦA NGƯỜI CHƠI
 // =====================================================================================
 export class Bullet {
-  /** opts: { speed, damage, radius, color, style, life, knock, bounces, explosive:{radius,damage} } */
-  constructor(x, y, angle, opts) {
+  /** Lấy 1 viên đạn từ Object Pool. opts: { speed, damage, radius, color, style, life, knock, bounces, explosive:{radius,damage} } */
+  static obtain(x, y, angle, opts) { return Bullet.pool.obtain().init(x, y, angle, opts); }
+
+  /** Đặt lại toàn bộ trạng thái (viên đạn có thể là đạn cũ được dùng lại) */
+  init(x, y, angle, opts) {
     this.x = x; this.y = y;
     this.angle = angle;
     this.vx = Math.cos(angle) * opts.speed;
@@ -197,19 +207,25 @@ export class Bullet {
     this.bounces = opts.bounces ?? 0;           // thẻ "Đạn Nảy Tường"
     this.explosive = opts.explosive ?? null;    // súng phóng lựu
     this.pierce = opts.pierce ?? 0;             // số quái xuyên qua thêm (Infinity = xuyên hết)
-    this.hitSet = this.pierce ? new Set() : null;
+    if (this.pierce) { (this.hitSet = this.ownSet ??= new Set()).clear(); } else this.hitSet = null;
     this.burn = opts.burn ?? 0;                 // giây đốt cháy khi trúng (Súng Phun Lửa)
     this.slow = opts.slow ?? 0;                 // giây làm chậm khi trúng (Cung Băng)
+    this.freeze = opts.freeze ?? 0;             // giây ĐÓNG BĂNG khi trúng (gai băng Thanh Xuân)
     this.ghostWalls = !!opts.ghostWalls;        // bay xuyên tường (Boomerang lúc quay về)
-    this.boomerang = opts.boomerang ? { range: opts.boomerang, sx: x, sy: y, back: false, speed: opts.speed } : null;
+    if (opts.boomerang) {
+      const b = (this.boomerang = this.ownBoom ??= {});
+      b.range = opts.boomerang; b.sx = x; b.sy = y; b.back = false; b.speed = opts.speed;
+    } else this.boomerang = null;
     this.age = 0;
     this.dead = false;
+    return this;
   }
 
   /** Trúng 1 quái: trả về true nếu đạn tiếp tục bay (xuyên) */
   onHitEnemy(e, game) {
     if (this.burn) { e.burnT = Math.max(e.burnT ?? 0, this.burn); }
     if (this.slow) { e.slowT = Math.max(e.slowT ?? 0, this.slow); }
+    if (this.freeze && e.freeze(this.freeze)) { game.fx.freezeBurst?.(e.cx, e.y); game.sound.play("freeze", 0.4); }
     if (!this.pierce) return false;
     this.hitSet.add(e);
     if (this.pierce !== Infinity) this.pierce--;
@@ -220,7 +236,7 @@ export class Bullet {
   /** Boomerang: bay ra hết tầm (hoặc chạm tường) thì quay về tay người chơi */
   updateBoomerang(dt, game) {
     const b = this.boomerang, p = game.player;
-    if (!b.back && Math.hypot(this.x - b.sx, this.y - b.sy) >= b.range) this.turnBack();
+    if (!b.back && (this.x - b.sx) ** 2 + (this.y - b.sy) ** 2 >= b.range * b.range) this.turnBack();
     if (b.back) {
       const dx = p.cx - this.x, dy = p.cy - this.y, d = Math.hypot(dx, dy) || 1;
       const sp = b.speed * 1.15;
@@ -313,6 +329,16 @@ export class Bullet {
       c.fillStyle = "#3a1f10"; c.fillRect(-6, -2, 12, 4); c.fillRect(-2, -6, 4, 12);
       c.fillStyle = this.color; c.fillRect(-5, -1, 10, 2); c.fillRect(-1, -5, 2, 10);
       c.fillStyle = "#ffffff"; c.fillRect(-1, -1, 2, 2);
+    } else if (this.style === "iceSpike") {
+      // gai băng: thân pha lê nhọn, đuôi tuyết lấp lánh
+      c.rotate(this.angle);
+      const t = Math.floor(this.age * 30) % 2;
+      c.fillStyle = "rgba(166,236,255,0.35)"; c.fillRect(-12, -2, 9, 4);
+      c.fillStyle = "#ffffff"; c.fillRect(-14 + t, -1 + t, 1, 1); c.fillRect(-10, 1 - t, 1, 1);
+      c.fillStyle = "#1c3a78"; c.fillRect(-6, -3, 10, 6); c.fillRect(4, -2, 3, 4); c.fillRect(7, -1, 2, 2);
+      c.fillStyle = "#62c8f4"; c.fillRect(-5, -2, 9, 4); c.fillRect(4, -1, 3, 2);
+      c.fillStyle = "#c8f2ff"; c.fillRect(-4, -2, 8, 1); c.fillRect(4, -1, 3, 1); c.fillRect(7, -1, 1, 1);
+      c.fillStyle = "#ffffff"; c.fillRect(-2, -2, 4, 1); c.fillRect(8, -1, 1, 1);
     } else if (this.style === "shard") {
       c.rotate(this.angle);
       c.fillStyle = "#a6ecff"; c.fillRect(-4, -1, 7, 2);
@@ -337,7 +363,8 @@ export class Bullet {
 //  ĐẠN CỦA QUÁI (tên của Cung Thủ Xương, cầu tím của Mini-Boss) — bị Kiếm Năng Lượng chém rụng
 // =====================================================================================
 export class EnemyBullet {
-  constructor(x, y, angle, opts) {
+  static obtain(x, y, angle, opts) { return EnemyBullet.pool.obtain().init(x, y, angle, opts); }
+  init(x, y, angle, opts) {
     this.x = x; this.y = y; this.angle = angle;
     this.vx = Math.cos(angle) * opts.speed; this.vy = Math.sin(angle) * opts.speed;
     this.radius = opts.radius ?? 3;
@@ -347,6 +374,7 @@ export class EnemyBullet {
     this.life = opts.life ?? 3;
     this.age = 0;
     this.dead = false;
+    return this;
   }
   update(dt, game) {
     this.age += dt;
@@ -391,7 +419,7 @@ export function fireWeapon(p, game, w) {
   const m = p.muzzle, mods = p.mods;
   const dmg = w.damage * mods.damageMul;
   const knock = (w.knockback ?? 120) * mods.knockMul;
-  game.flashMuzzle(m.x, m.y, w.color, w.type === "shotgun" || w.type === "grenade" ? 7 : 4);
+  game.flashMuzzle(m.x, m.y, w.color, w.type === "shotgun" || w.type === "grenade" ? 7 : w.type === "frostHand" ? 3 : 4);
   game.noteWeaponUsed(w);
   game.sound.play(w.sound ?? "shoot", 0.4);
 
@@ -402,7 +430,7 @@ export function fireWeapon(p, game, w) {
       for (let i = 0; i < n; i++) {
         const a = p.aim - w.cone / 2 + (w.cone * i) / Math.max(1, n - 1) + rand(-0.03, 0.03);
         const speed = w.bulletSpeed * rand(0.9, 1.1);
-        game.bullets.push(new Bullet(m.x, m.y, a, { speed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "pellet", life: w.range / speed, knock, bounces: mods.bounce }));
+        game.bullets.push(Bullet.obtain(m.x, m.y, a, { speed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "pellet", life: w.range / speed, knock, bounces: mods.bounce }));
       }
       game.fx.muzzleShotgun(m.x, m.y, p.aim);
       game.shake(0.14, 3);
@@ -416,7 +444,7 @@ export function fireWeapon(p, game, w) {
     case "grenade": {
       p.recoil = 5;
       for (const off of splitAngles(mods.split, 0.14)) {
-        game.bullets.push(new Bullet(m.x, m.y, p.aim + off, {
+        game.bullets.push(Bullet.obtain(m.x, m.y, p.aim + off, {
           speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "grenade", life: w.range / w.bulletSpeed,
           knock, explosive: { radius: w.aoe, damage: dmg },
         }));
@@ -428,22 +456,28 @@ export function fireWeapon(p, game, w) {
       p.recoil = 1;
       for (const off of splitAngles(mods.split, 0.22)) {
         const a = p.aim + off + rand(-0.18, 0.18), speed = w.bulletSpeed * rand(0.85, 1.15);
-        game.bullets.push(new Bullet(m.x, m.y, a, { speed, damage: dmg, radius: 4, color: w.color, style: "flame", life: w.range / speed, knock, pierce: Infinity, burn: w.burn }));
+        game.bullets.push(Bullet.obtain(m.x, m.y, a, { speed, damage: dmg, radius: 4, color: w.color, style: "flame", life: w.range / speed, knock, pierce: Infinity, burn: w.burn }));
       }
       break;
     }
     case "frostbow": {
       p.recoil = 3;
       for (const off of splitAngles(mods.split, 0.1)) {
-        game.bullets.push(new Bullet(m.x, m.y, p.aim + off, { speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "iceArrow", knock, pierce: w.pierce, slow: w.slow, bounces: mods.bounce }));
+        game.bullets.push(Bullet.obtain(m.x, m.y, p.aim + off, { speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "iceArrow", knock, pierce: w.pierce, slow: w.slow, bounces: mods.bounce }));
       }
       break;
     }
     case "boomerang": {
       p.recoil = -3;
       for (const off of splitAngles(mods.split, 0.3)) {
-        game.bullets.push(new Bullet(m.x, m.y, p.aim + off, { speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "boomerang", life: 4, knock, pierce: Infinity, boomerang: w.range }));
+        game.bullets.push(Bullet.obtain(m.x, m.y, p.aim + off, { speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: "boomerang", life: 4, knock, pierce: Infinity, boomerang: w.range }));
       }
+      break;
+    }
+    case "frostHand": {   // tay không: triệu hồi ĐƯỜNG GAI BĂNG chạy dọc mặt đất (main.js -> Game.castIceLine)
+      p.recoil = 2;
+      for (const off of splitAngles(mods.split, 0.3)) game.castIceLine(p, w, dmg, knock, p.aim + off);
+      game.shake(0.08, 1);
       break;
     }
     case "lightning": {
@@ -456,7 +490,7 @@ export function fireWeapon(p, game, w) {
       if (w.type === "minigun") game.shake(0.04, 1);
       const spread = (Math.random() - 0.5) * (w.spread ?? 0.08);
       for (const off of splitAngles(mods.split, 0.1)) {
-        game.bullets.push(new Bullet(m.x, m.y, p.aim + spread + off, {
+        game.bullets.push(Bullet.obtain(m.x, m.y, p.aim + spread + off, {
           speed: w.bulletSpeed, damage: dmg, radius: w.bulletRadius, color: w.color, style: w.type === "magic" ? "orb" : "bullet",
           knock, bounces: mods.bounce,
         }));
@@ -473,7 +507,8 @@ function fireLaser(game, x0, y0, angle, w, dmg, knock) {
   const ex = x0 + (x1 - x0) * ray.t, ey = y0 + (y1 - y0) * ray.t;
   for (const e of game.enemies) {
     if (e.dead) continue;
-    if (pointSegDist(e.cx, e.cy, x0, y0, ex, ey) <= e.radius + w.width) game.damageEnemy(e, dmg, angle, knock, { pierce: true });
+    const r = e.radius + w.width;
+    if (pointSegDist2(e.cx, e.cy, x0, y0, ex, ey) <= r * r) game.damageEnemy(e, dmg, angle, knock, { pierce: true });
   }
   for (const b of ray.barrels) game.igniteBarrel(b);
   if (ray.crystal) game.hitCrystal(ray.crystal, dmg, angle);
@@ -487,12 +522,14 @@ function fireLaser(game, x0, y0, angle, w, dmg, knock) {
  */
 function fireLightning(game, x0, y0, angle, w, dmg, knock) {
   let target = null, best = Infinity;
+  const R2 = w.range * w.range;
   for (const e of game.enemies) {
     if (e.dead) continue;
-    const d = Math.hypot(e.cx - x0, e.cy - y0);
-    if (d > w.range || Math.abs(angleDiff(Math.atan2(e.cy - y0, e.cx - x0), angle)) > 0.45) continue;
-    if (!game.world.lineOfSight(x0, y0, e.cx, e.cy)) continue;
-    const score = d + Math.abs(angleDiff(Math.atan2(e.cy - y0, e.cx - x0), angle)) * 120;
+    const dx = e.cx - x0, dy = e.cy - y0, d2 = dx * dx + dy * dy;
+    if (d2 > R2) continue;                                  // loại nhanh bằng khoảng cách bình phương
+    const da = Math.abs(angleDiff(Math.atan2(dy, dx), angle));
+    if (da > 0.45 || !game.world.lineOfSight(x0, y0, e.cx, e.cy)) continue;
+    const score = Math.sqrt(d2) + da * 120;                 // chỉ tính căn cho vài quái nằm trong nón bắn
     if (score < best) { best = score; target = e; }
   }
   const pts = [[x0, y0]];
@@ -509,11 +546,11 @@ function fireLightning(game, x0, y0, angle, w, dmg, knock) {
       pts.push([cur.cx, cur.cy]);
       game.damageEnemy(cur, dmg * k, Math.atan2(cur.cy - pts[pts.length - 2][1], cur.cx - pts[pts.length - 2][0]), knock, { pierce: true });
       k *= 0.85;   // mỗi lần nhảy yếu đi 15%
-      let next = null, nd = w.chainRange;
-      for (const e of game.enemies) {
+      let next = null, nd = w.chainRange * w.chainRange;
+      for (const e of game.enemiesNear(cur.cx, cur.cy, w.chainRange)) {
         if (e.dead || hit.has(e)) continue;
-        const d = Math.hypot(e.cx - cur.cx, e.cy - cur.cy);
-        if (d < nd) { nd = d; next = e; }
+        const d2 = (e.cx - cur.cx) ** 2 + (e.cy - cur.cy) ** 2;
+        if (d2 < nd) { nd = d2; next = e; }
       }
       cur = next;
     }
@@ -545,26 +582,29 @@ export function meleeSwing(p, game, w) {
   const dmg = w.damage * mods.damageMul, knock = (w.knockback ?? 170) * mods.knockMul;
   const sword = w.type === "sword";
   p.recoil = -5;
+  p.startSwing?.(w);        // vũ khí vung theo cung (main.js -> Player.startSwing)
   game.noteWeaponUsed(w);
   game.fx.slash(p.cx, p.cy, p.aim, w.range * (sword ? 0.85 : 0.7), w.slashPalette);
   if (sword) game.waves.push({ x: p.cx, y: p.cy, a: p.aim, r: w.range, arc: w.arc, life: 0.18, max: 0.18, color: w.color });
   game.sound.play(w.sound ?? "punch", 0.5);
-  for (const e of game.enemies) {
+  // chỉ xét quái ở gần (lưới không gian) + so khoảng cách BÌNH PHƯƠNG, không Math.hypot
+  for (const e of game.enemiesNear(p.cx, p.cy, w.range + 30)) {
     if (e.dead) continue;
-    const ex = e.cx - p.cx, ey = e.cy - p.cy;
-    if (Math.hypot(ex, ey) > w.range + e.radius) continue;
+    const ex = e.cx - p.cx, ey = e.cy - p.cy, r = w.range + e.radius;
+    if (ex * ex + ey * ey > r * r) continue;
     if (Math.abs(angleDiff(Math.atan2(ey, ex), p.aim)) <= w.arc) game.damageEnemy(e, dmg, p.aim, knock);
   }
   // đánh trúng thùng nổ / tinh thể trong tầm
-  for (const b of game.world.barrels) if (!b.dead && Math.hypot(b.x - p.cx, b.y - 6 - p.cy) < w.range + b.r && Math.abs(angleDiff(Math.atan2(b.y - 6 - p.cy, b.x - p.cx), p.aim)) <= w.arc) game.igniteBarrel(b);
-  for (const c of game.world.crystals) if (!c.dead && Math.hypot(c.x - p.cx, c.y - 8 - p.cy) < w.range + c.r && Math.abs(angleDiff(Math.atan2(c.y - 8 - p.cy, c.x - p.cx), p.aim)) <= w.arc) game.hitCrystal(c, dmg, p.aim);
+  const inArc = (ox, oy, rr) => (ox - p.cx) ** 2 + (oy - p.cy) ** 2 < rr * rr && Math.abs(angleDiff(Math.atan2(oy - p.cy, ox - p.cx), p.aim)) <= w.arc;
+  for (const b of game.world.barrels) if (!b.dead && inArc(b.x, b.y - 6, w.range + b.r)) game.igniteBarrel(b);
+  for (const c of game.world.crystals) if (!c.dead && inArc(c.x, c.y - 8, w.range + c.r)) game.hitCrystal(c, dmg, p.aim);
   // >>> KIẾM CHÉM RỤNG ĐẠN
   if (sword) {
     let parried = 0;
     for (const b of game.enemyBullets) {
       if (b.dead) continue;
-      const dx = b.x - p.cx, dy = b.y - p.cy;
-      if (Math.hypot(dx, dy) > w.range + 10) continue;
+      const dx = b.x - p.cx, dy = b.y - p.cy, r = w.range + 10;
+      if (dx * dx + dy * dy > r * r) continue;
       if (Math.abs(angleDiff(Math.atan2(dy, dx), p.aim)) > w.arc + 0.2) continue;
       b.dead = true;
       parried++;
@@ -588,3 +628,6 @@ export function drawWeaponIcon(g, weapon, x, y, w, h, scale = 1) {
   g.restore();
 }
 
+// Object Pool cho đạn: tạo sẵn để lúc xả đạn không phải `new` liên tục
+Bullet.pool = new Pool(() => new Bullet(), 256);
+EnemyBullet.pool = new Pool(() => new EnemyBullet(), 64);

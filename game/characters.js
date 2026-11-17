@@ -8,6 +8,9 @@
 //       Chọn `skill.type`   : "rage" (Cuồng Nộ) | "dash" (Lướt Xung Kích) | "nova" (Bão Cầu Năng Lượng)
 //       (logic của từng loại nằm trong main.js, mục SKILL_HANDLERS / Player.attack)
 //    4. Chèn ảnh của bạn vào 3 ô `sprite`, `weaponImg`, `skillIcon` (để "" thì game tự vẽ hình pixel thay thế).
+//       `sprite` là 1 ảnh TĨNH. Muốn nhân vật có hoạt ảnh từ SPRITESHEET của bạn: thêm khối `spritesheet`
+//       (xem nhân vật Thanh Xuân ở cuối file làm mẫu: đường dẫn ảnh, kích thước ô, hàng/frame của từng hoạt ảnh).
+//       Không có `spritesheet` thì game vẽ nhân vật CHIBI theo khối `chibi` (kiểu đầu, màu tóc, áo, quần...).
 //
 //  Đường dẫn ảnh tính từ thư mục  game/  — ví dụ "assets/images/gunner.png"
 // =====================================================================================
@@ -38,7 +41,10 @@ export const CHARACTERS = [
     // >>> CHÈN ICON KỸ NĂNG: ảnh vuông (16x16, 20x20 hoặc 32x32 px)
     skillIcon: "",       // ví dụ: "assets/images/skill_rage.png"
 
-    // Màu hình pixel thay thế (chỉ dùng khi `sprite` để trống). A = sáng nhất ... J = tối nhất, m = điểm nhấn
+    // Ngoại hình CHIBI kiểu Soul Knight (vẽ bằng code, xem src/chibi.js):
+    //   head: "knight" (mũ sắt + chùm lông) | "monk" (tóc dựng + băng đô) | "wizard" (mũ phù thủy) | "helm" | "skull" | "" (tóc thường)
+    chibi: { head: "knight", helm: "#c4cede", accent: "#ff4a3a", outfit: "#4c6ab0", outfit2: "#6c84c4", belt: "#ffd34a", pants: "#323a5a", shoes: "#22243a" },
+    // Màu hình người pixelfx kiểu cũ (dự phòng). A = sáng nhất ... J = tối nhất, m = điểm nhấn
     fallback: {
       hat: "plume",      // phụ kiện trên đầu: "plume" (chùm lông) | "band" (băng đô) | "wizard" (mũ phù thủy) | ""
       accent: "#ff4a3a", // màu phụ kiện
@@ -84,6 +90,7 @@ export const CHARACTERS = [
     weaponImg: "",       // >>> CHÈN ẢNH VŨ KHÍ (găng tay), ví dụ: "assets/images/gauntlet.png"
     skillIcon: "",       // >>> CHÈN ICON KỸ NĂNG, ví dụ: "assets/images/skill_dash.png"
 
+    chibi: { head: "monk", hair: "#2a1c18", accent: "#ff3b4a", skin: "#ffcfa0", outfit: "#f08a2a", outfit2: "#ffcfa0", armSkin: true, belt: "#2a2028", pants: "#c86a20", shoes: "#2a2028" },
     fallback: {
       hat: "band",
       accent: "#ff3b4a",
@@ -133,6 +140,7 @@ export const CHARACTERS = [
     weaponImg: "",       // >>> CHÈN ẢNH VŨ KHÍ (trượng), ví dụ: "assets/images/staff.png"
     skillIcon: "",       // >>> CHÈN ICON KỸ NĂNG, ví dụ: "assets/images/skill_nova.png"
 
+    chibi: { head: "wizard", hair: "#e8e0ff", accent: "#7a52d6", accent2: "#ffd34a", outfit: "#6649aa", outfit2: "#7a5ac0", robe: true, belt: "#ffd34a", shoes: "#2a1c40" },
     fallback: {
       hat: "wizard",
       accent: "#7a52d6",
@@ -163,6 +171,68 @@ export const CHARACTERS = [
       damage: 2,
       bulletSpeed: 210,
       color: "#5ef0ff",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 4 — THANH XUÂN: tay không bắn gai băng, đóng băng quái; tuyệt chiêu Ngại Ngùng
+  // -----------------------------------------------------------------------------------
+  {
+    id: "thanhxuan",
+    name: "Thanh Xuân",
+    title: "Cô nàng băng giá hay ngại",
+    desc: "Đeo balo đi học mà lạc vào hầm ngục. Tay không bắn gai băng đóng băng quái; hễ ngại là trời đất nổi băng sét.",
+
+    sprite: "", weaponImg: "", skillIcon: "",
+
+    // >>> SPRITESHEET CỦA BẠN — làm sạch từ ảnh gốc thanhxuan-goc.png bằng lệnh:
+    //     python game/tools/prepare_spritesheet.py game/assets/images/actors/thanhxuan-goc.png game/assets/images/actors/thanhxuan.png 40 4 8 4 --shy=0:3 --colors=14 --outline --erase=393:79:428:97 --head=0.85
+    //     Mỗi hàng 1 hoạt ảnh, mỗi cột 1 frame. Lệch thì chỉnh frameW/frameH, anchorX/anchorY (vị trí CHÂN trong 1 ô).
+    spritesheet: {
+      src: "assets/images/actors/thanhxuan.png",
+      frameW: 39, frameH: 41,          // kích thước 1 ô (pixel)
+      anchorX: 19, anchorY: 39,        // điểm chân trong ô
+      hand: [7, -15],                  // bàn tay phát gai băng (tính từ chân, quay mặt sang phải)
+      anims: {
+        idle:  { row: 0, seq: [0, 1, 2, 1], fps: 4 },          // seq = thứ tự cột phát lặp lại
+        run:   { row: 1, frames: 8, fps: 14, contact: [2, 6] }, // contact = frame chân chạm đất (tung bụi)
+        skill: { row: 2, frames: 4, fps: 12 },                  // lướt (Shift)
+        shy:   { row: 3, frames: 4, fps: 10 },                  // ôm mặt ngại ngùng (tuyệt chiêu)
+      },
+    },
+    // >>> SKIN THAY ĐỔI: mỗi lần dùng tuyệt chiêu đổi sang skin kế tiếp, hết danh sách thì về skin gốc.
+    //     Mỗi skin là 1 spritesheet CÙNG bố cục với `spritesheet` ở trên (chỉ khác màu áo quần).
+    //     Hoodie đen mở khóa + áo trắng + quần đen: tạo bằng  python game/tools/make_hoodie_skin.py <sheet gốc> <sheet mới>
+    skins: [
+      { name: "Hoodie đen", src: "assets/images/actors/thanhxuan-hoodie.png" },
+    ],
+    chibi: { head: "", hair: "#2a2630", outfit: "#1e1c26", outfit2: "#1e1c26", pants: "#c8ccd8", shoes: "#3a3a48" },
+    fallback: { hat: "", accent: "#7cd8ff", palette: { A: "#e8f4ff", B: "#b8d4ec", C: "#88a8cc", D: "#5c7aa4", E: "#6c88b0", F: "#465e86", G: "#34486a", J: "#24324e", m: "#7cd8ff" } },
+
+    stats: { hp: 8, armor: 7, speed: 108 },
+
+    weapon: {
+      name: "Tay Không · Đường Băng",
+      desc: "Triệu hồi đường gai băng dài xuyên qua mọi quái, đóng băng 3 giây",
+      type: "frostHand",
+      damage: 3,           // mỗi con trên đường băng trúng 1 lần
+      fireRate: 0.42,
+      range: 210,          // >>> ĐỘ DÀI ĐƯỜNG BĂNG (pixel)
+      width: 20,           // độ rộng vùng sát thương
+      speed: 650,          // tốc độ băng lan ra (pixel/giây)
+      freeze: 3,           // giây đóng băng quái (Mini-Boss chỉ bị 1 giây)
+      color: "#a6ecff",
+      sound: "iceShot",
+    },
+
+    skill: {
+      type: "shy",
+      name: "Ngại Ngùng",
+      desc: "Ôm mặt ngại ngùng — băng giá đóng băng rồi sấm sét xóa sổ mọi quái trên màn hình (Mini-Boss mất 30% máu). Bất tử khi đang ngại.",
+      cooldown: 10,
+      duration: 1.5,       // giây ôm mặt
+      bossDamage: 0.3,     // Mini-Boss mất 30% máu tối đa
+      color: "#7cd8ff",
     },
   },
 ];

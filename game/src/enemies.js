@@ -7,33 +7,46 @@
 //      "kamikaze"  — Dơi Cảm Tử: cực nhanh, áp sát thì nhấp nháy đỏ và nổ sau 0.6s
 //      "boss"      — Mini-Boss: luân phiên bắn đạn 12 hướng và lướt húc
 // =====================================================================================
-import { createFx, hex } from "../../pixelfx-main/src/core/index.js";
-import * as fxSlime from "../../pixelfx-main/src/fx/critters/slime.js";
-import * as fxBat from "../../pixelfx-main/src/fx/critters/bat.js";
-import * as fxGhost from "../../pixelfx-main/src/fx/critters/ghost.js";
-import { makeActor, drawHero, ScaledAnim, painterFor } from "./actors.js";
 import { EnemyBullet } from "./weapons.js";
-import { angleDiff, rand, rndSeed, withAlpha, TAU } from "./util.js";
+import { Pool } from "./pool.js";
+import { angleDiff, rand, withAlpha, TAU } from "./util.js";
 
-// Bảng màu quái hình người (A sáng nhất ... J tối nhất, m = mắt / điểm nhấn)
-const SKELETON = { hat: "hood", accent: "#3a3040", palette: { A: "#f4f0e0", B: "#d8d2bc", C: "#b4ac94", D: "#8a826c", E: "#9c947c", F: "#6e6654", G: "#4c4638", J: "#36302a", m: "#ff3030" } };
-const KNIGHT = { hat: "helm", accent: "#8492aa", palette: { A: "#e6ecf4", B: "#b4bfd0", C: "#8492aa", D: "#5c6680", E: "#6c7792", F: "#465068", G: "#323a50", J: "#232a3c", m: "#ffd34a" } };
-const BOSS_PALETTE = ["#140a24", "#2c1450", "#4c2488", "#7a3cc8", "#a874f0", "#d8b8ff", "#ffffff"];
-
-/** Chỉ số từng loại quái — chỉnh độ khó ở đây */
+/**
+ * Chỉ số từng loại quái — chỉnh độ khó ở đây. (Bản này đã GIẢM máu ~40% so với trước: Slime 1 phát là chết.)
+ * sprite: tên spritesheet trong fx-config.js -> ACTORS (ngoại hình quái hình người cũng nằm ở đó, mục LOOKS)
+ * scale : phóng to khi vẽ (Slime khổng lồ x1.6, Mini-Boss x2.2)
+ */
 export const ENEMY_TYPES = {
-  slime:    { name: "Slime Xanh",       kind: "critter", fx: fxSlime, fxOpts: { hop: 8 },   ai: "chase",    hp: 2,  speed: 38,  radius: 11, bodyY: -12, damage: 1, score: 10,  exp: 1, image: "enemySlime" },
-  bigSlime: { name: "Slime Khổng Lồ",   kind: "critter", fx: fxSlime, fxOpts: { hop: 8 },   ai: "chase",    hp: 7,  speed: 27,  radius: 17, bodyY: -19, damage: 2, score: 30,  exp: 3, image: "enemySlime", scale: 1.6, split: "slime", frame: [64, 60, 32, 56] },
-  bat:      { name: "Dơi Cảm Tử",       kind: "critter", fx: fxBat,   fxOpts: {},           ai: "kamikaze", hp: 1,  speed: 122, radius: 8,  bodyY: -8,  damage: 1, score: 15,  exp: 1, image: "enemyBat", flying: true, fuse: 0.6, armRange: 26, blast: 40, noContact: true },
-  ghost:    { name: "Hồn Ma",           kind: "critter", fx: fxGhost, fxOpts: { hover: 6 }, ai: "chase",    hp: 4,  speed: 28,  radius: 11, bodyY: -18, damage: 2, score: 25,  exp: 2, image: "enemyGhost", flying: true },
-  archer:   { name: "Cung Thủ Xương",   kind: "hero",    look: SKELETON,                    ai: "ranged",   hp: 3,  speed: 54,  radius: 8,  bodyY: -17, damage: 1, score: 20,  exp: 2, image: "enemyArcher", keep: 280, sight: 330, aimTime: 0.8, reload: 1.4, arrowSpeed: 340 },
-  knight:   { name: "Hiệp Sĩ Khiên",    kind: "hero",    look: KNIGHT,                      ai: "tank",     hp: 10, speed: 24,  radius: 10, bodyY: -17, damage: 2, score: 35,  exp: 3, image: "enemyKnight", shieldArc: 1.05, shieldReduce: 0.75, turnRate: 1.8 },
-  boss:     { name: "Mini-Boss Hồn Ma Tím", kind: "critter", fx: fxGhost, fxOpts: { hover: 6, palette: BOSS_PALETTE }, ai: "boss", hp: 90, speed: 40, radius: 24, bodyY: -40, damage: 2, score: 300, exp: 25, image: "enemyBoss", flying: true, scale: 2.2, frame: [60, 66, 30, 60] },
+  slime:    { name: "Slime Xanh",       sprite: "slime",  ai: "chase",    hp: 1.2, speed: 38,  radius: 11, bodyY: -12, damage: 1, score: 10,  exp: 1, image: "enemySlime" },
+  bigSlime: { name: "Slime Khổng Lồ",   sprite: "slime",  ai: "chase",    hp: 4,  speed: 27,  radius: 17, bodyY: -19, damage: 2, score: 30,  exp: 3, image: "enemySlime", scale: 1.6, split: "slime" },
+  bat:      { name: "Dơi Cảm Tử",       sprite: "bat",    ai: "kamikaze", hp: 1,  speed: 122, radius: 8,  bodyY: -8,  damage: 1, score: 15,  exp: 1, image: "enemyBat", flying: true, fuse: 0.6, armRange: 26, blast: 40, noContact: true },
+  ghost:    { name: "Hồn Ma",           sprite: "ghost",  ai: "chase",    hp: 2.5, speed: 28,  radius: 11, bodyY: -18, damage: 2, score: 25,  exp: 2, image: "enemyGhost", flying: true },
+  archer:   { name: "Cung Thủ Xương",   sprite: "archer", ai: "ranged",   hp: 2,  speed: 54,  radius: 8,  bodyY: -17, damage: 1, score: 20,  exp: 2, image: "enemyArcher", keep: 280, sight: 330, aimTime: 0.8, reload: 1.4, arrowSpeed: 340 },
+  knight:   { name: "Hiệp Sĩ Khiên",    sprite: "knight", ai: "tank",     hp: 6,  speed: 24,  radius: 10, bodyY: -17, damage: 2, score: 35,  exp: 3, image: "enemyKnight", shieldArc: 1.05, shieldReduce: 0.75, turnRate: 1.8 },
+  boss:     { name: "Mini-Boss Hồn Ma Tím", sprite: "boss", ai: "boss", hp: 60, speed: 40, radius: 24, bodyY: -40, damage: 2, score: 300, exp: 25, image: "enemyBoss", flying: true, scale: 2.2 },
 };
 
+/** Bán kính va chạm lớn nhất (Boss tinh anh) — dùng cho lưới không gian */
+export const MAX_ENEMY_RADIUS = 28;
+
+/**
+ * Tản đội hình (Soft Separation) + bao vây:
+ *   gap        — khoảng hở mong muốn giữa 2 quái (pixel)
+ *   stiffness  — độ "cứng" của lực đẩy (càng lớn tách càng nhanh; nhỏ = mềm, đỡ rung)
+ *   flank      — độ lệch hướng tiếp cận tối đa (radian): mỗi quái vòng sang 1 bên để vây quanh người chơi
+ *   flankFrom  — khoảng cách (px) bắt đầu đi vòng; gần hơn thì lao thẳng vào
+ */
+export const CROWD = { gap: 3, stiffness: 18, flank: 0.85, flankFrom: 70, flankFull: 260 };
+
 export class Enemy {
-  /** opts: { elite: true } — quái Tinh Anh: x3 máu, viền vàng, rơi Rương Bạc */
-  constructor(typeName, x, y, opts = {}) {
+  /** Lấy 1 con quái từ Object Pool (không `new` mỗi lần sinh quái). sprites = Map tên -> ActorSprite */
+  static obtain(typeName, x, y, opts, sprites) { return Enemy.pool.obtain().init(typeName, x, y, opts, sprites); }
+
+  /**
+   * Đặt lại TOÀN BỘ trạng thái (đối tượng có thể là con quái cũ đã chết được dùng lại).
+   * opts: { elite: true } — quái Tinh Anh: x3 máu, viền vàng, rơi Rương Bạc
+   */
+  init(typeName, x, y, opts = {}, sprites = null) {
     const t = ENEMY_TYPES[typeName];
     this.type = typeName;
     this.cfg = t;
@@ -58,21 +71,34 @@ export class Enemy {
     this.strafe = Math.random() < 0.5 ? 1 : -1;
     this.burnT = 0; this.burnTick = 0;  // đang cháy (Súng Phun Lửa): 1 sát thương / giây
     this.slowT = 0;                      // đang bị làm chậm (Cung Băng)
+    this.speedMul = 1;
+    this.freezeT = 0;                    // đang bị ĐÓNG BĂNG (gai băng của Thanh Xuân): đứng im, không đánh
+    this.serial = ++Enemy.serial;        // số định danh (quái được tái sử dụng từ pool -> phân biệt con cũ / con mới)
+    this.attack = undefined; this.volley = 0;
+    this.flank = rand(-1, 1) * CROWD.flank;   // hướng vòng vây riêng của con này
+    this.moving = false;
+    this.gridId = -1;
 
-    if (t.kind === "hero") {
-      this.actor = makeActor({ fallback: t.look });
-      this.walk = Math.random() * 3;
-    } else {
-      this.anim = createFx(t.fx, { ...t.fxOpts, x, y, seed: rndSeed() });
-      this.anim.update(Math.random() * (t.fx.meta.duration ?? 1));
-      if (t.scale) this.scaled = new ScaledAnim(this.anim, ...t.frame);
-    }
+    // Hoạt ảnh: spritesheet + AnimationController (Idle/Run cho quái hình người, "move" cho Slime/Dơi/Ma)
+    this.sprite = sprites?.get(t.sprite) ?? null;
+    this.anim = this.sprite ? this.sprite.controller() : null;
+    this.anim?.randomize();
     if (this.boss) { this.state = "move"; this.stateTime = 2; this.volley = 0; }
+    return this;
   }
 
   get cx() { return this.x; }
   get cy() { return this.y + this.cfg.bodyY - this.z; }
-  get canHurt() { return this.spawnTime <= 0 && !this.air && !this.cfg.noContact; }
+  get canHurt() { return this.spawnTime <= 0 && !this.air && !this.cfg.noContact && !(this.freezeT > 0); }
+
+  /** Đóng băng t giây (Mini-Boss chỉ bị tối đa 1 giây). Trả về true nếu vừa mới bị đóng băng. */
+  freeze(t) {
+    const was = this.freezeT > 0;
+    this.freezeT = Math.max(this.freezeT, this.boss ? Math.min(1, t) : t);
+    if (this.state === "aim") { this.state = "move"; this.reload = Math.max(this.reload, 0.6); }   // cung thủ mất lượt ngắm
+    if (this.boss && (this.state === "charge" || this.state === "windup")) { this.state = "move"; this.stateTime = 1; }
+    return !was;
+  }
   get contactDamage() { return this.boss && this.state === "charge" ? 3 : this.cfg.damage; }
 
   launch(height) { if (!this.boss) this.air = { t: 0, dur: 0.5, h: height }; }
@@ -88,8 +114,9 @@ export class Enemy {
     const r = Math.max(5, this.radius * 0.6);
     const bx = this.x, by = this.y;
     game.world.moveBody(this, dx * v * dt, dy * v * dt, r, this.cfg.flying);
-    const moved = Math.hypot(this.x - bx, this.y - by);
-    if (v > 0 && moved < v * dt * 0.3 && this.sideTime <= 0) { this.side = Math.random() < 0.5 ? 1 : -1; this.sideTime = 0.7; }
+    const mx = this.x - bx, my = this.y - by, moved2 = mx * mx + my * my, want = v * dt * 0.3;
+    this.moving = moved2 > 0.0001;
+    if (v > 0 && moved2 < want * want && this.sideTime <= 0) { this.side = Math.random() < 0.5 ? 1 : -1; this.sideTime = 0.7; }
   }
 
   update(dt, game) {
@@ -98,8 +125,9 @@ export class Enemy {
     this.flash -= dt;
     this.stateTime -= dt;
     const dx = p.cx - this.cx, dy = p.cy - this.cy;
-    const d = Math.hypot(dx, dy) || 1;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;   // 1 lần / quái / frame để có hướng đi (không phải vòng lặp va chạm)
     const ux = dx / d, uy = dy / d;
+    this.moving = false;
     // hiệu ứng trạng thái
     this.slowT = Math.max(0, this.slowT - dt);
     const speedMul = this.slowT > 0 ? (this.boss ? 0.75 : 0.5) : 1;
@@ -110,6 +138,15 @@ export class Enemy {
       if (this.burnTick <= 0) { this.burnTick = 0.5; game.damageEnemy(this, 0.5, 0, 0, { quiet: true, pierce: true }); if (this.dead) return; }
     }
 
+    // --- ĐÓNG BĂNG: đứng im như tượng (vẫn bị đẩy lùi), hoạt ảnh dừng ---
+    if (this.freezeT > 0) {
+      this.freezeT -= dt;
+      if (Math.abs(this.kx) > 1 || Math.abs(this.ky) > 1) game.world.moveBody(this, this.kx * dt, this.ky * dt, Math.max(5, this.radius * 0.6), this.cfg.flying);
+      const damp = Math.pow(0.0005, dt);
+      this.kx *= damp; this.ky *= damp;
+      return;
+    }
+
     if (this.air) {
       this.air.t += dt;
       const u = this.air.t / this.air.dur;
@@ -117,12 +154,13 @@ export class Enemy {
       if (u >= 1) { this.air = null; this.z = 0; }
     } else {
       switch (this.cfg.ai) {
-        case "chase": this.steer(game, ux, uy, this.cfg.speed * speedMul, dt); break;
+        case "chase": { const [fx, fy] = this.flankDir(ux, uy, d); this.steer(game, fx, fy, this.cfg.speed * speedMul, dt); break; }
         case "tank": {
           // quay khiên chậm về phía người chơi -> người chơi lướt vòng ra sau lưng được
           const want = Math.atan2(dy, dx), diff = angleDiff(want, this.facing), step = this.cfg.turnRate * dt;
           this.facing += Math.max(-step, Math.min(step, diff));
-          this.steer(game, ux, uy, this.cfg.speed * speedMul, dt);
+          const [fx, fy] = this.flankDir(ux, uy, d);
+          this.steer(game, fx, fy, this.cfg.speed * speedMul, dt);
           break;
         }
         case "kamikaze": this.updateBat(dt, game, d, ux, uy); break;
@@ -137,12 +175,22 @@ export class Enemy {
     const damp = Math.pow(this.boss ? 0.00001 : 0.0005, dt);
     this.kx *= damp; this.ky *= damp;
 
+    // --- Hoạt ảnh theo deltaTime ---
     if (this.anim) {
-      this.anim.options.flip = dx < 0;
-      this.anim.update(this.air ? dt * 2 : this.fuse >= 0 ? dt * 3 : dt);
-    } else {
-      this.walk += dt;
+      if (this.anim.anims.run) this.anim.set(this.moving && this.state !== "aim" ? "run" : "idle");
+      this.anim.update(dt, this.air ? 2 : this.fuse >= 0 ? 3 : this.speedMul < 1 ? 0.6 : 1);
     }
+  }
+
+  /**
+   * Bao vây: khi còn xa, mỗi quái lệch hướng đi 1 góc riêng (this.flank) để tiếp cận từ nhiều phía;
+   * càng tới gần càng lao thẳng -> đám đông dàn thành vòng quanh người chơi thay vì dồn 1 cục.
+   */
+  flankDir(ux, uy, d) {
+    const k = Math.min(1, Math.max(0, (d - CROWD.flankFrom) / (CROWD.flankFull - CROWD.flankFrom)));
+    if (k <= 0) return [ux, uy];
+    const a = this.flank * k, c = Math.cos(a), s = Math.sin(a);
+    return [ux * c - uy * s, ux * s + uy * c];
   }
 
   // ---------- Dơi Cảm Tử ----------
@@ -168,7 +216,7 @@ export class Enemy {
       // đứng yên ngắm, laser đỏ bám theo người chơi tới 0.15s cuối thì khóa hướng
       if (this.stateTime > 0.15) this.aimAngle = Math.atan2(p.cy - this.cy, p.cx - this.cx);
       if (this.stateTime <= 0) {
-        game.enemyBullets.push(new EnemyBullet(this.cx + Math.cos(this.aimAngle) * 8, this.cy + Math.sin(this.aimAngle) * 8, this.aimAngle, {
+        game.enemyBullets.push(EnemyBullet.obtain(this.cx + Math.cos(this.aimAngle) * 8, this.cy + Math.sin(this.aimAngle) * 8, this.aimAngle, {
           speed: c.arrowSpeed, damage: c.damage, radius: 3, style: "arrow", life: 2,
         }));
         game.sound.play("arrow", 0.4);
@@ -207,7 +255,7 @@ export class Enemy {
           const off = (3 - this.volley) * (Math.PI / 12);
           for (let i = 0; i < 12; i++) {
             const a = off + (i / 12) * TAU;
-            game.enemyBullets.push(new EnemyBullet(this.cx + Math.cos(a) * 14, this.cy + Math.sin(a) * 14, a, { speed: 120, damage: 1, radius: 4, style: "orb", color: "#c48cff", life: 4 }));
+            game.enemyBullets.push(EnemyBullet.obtain(this.cx + Math.cos(a) * 14, this.cy + Math.sin(a) * 14, a, { speed: 120, damage: 1, radius: 4, style: "orb", color: "#c48cff", life: 4 }));
           }
           game.sound.play("bossShoot", 0.5);
           game.shake(0.15, 2);
@@ -223,7 +271,7 @@ export class Enemy {
       case "charge": {
         const before = { x: this.x, y: this.y };
         const blocked = game.world.moveBody(this, Math.cos(this.aimAngle) * 380 * dt, Math.sin(this.aimAngle) * 380 * dt, this.radius * 0.6, false);
-        if (blocked && Math.hypot(this.x - before.x, this.y - before.y) < 1) { this.stateTime = 0; game.shake(0.25, 4); }
+        if (blocked && (this.x - before.x) ** 2 + (this.y - before.y) ** 2 < 1) { this.stateTime = 0; game.shake(0.25, 4); }
         if (this.stateTime <= 0) { this.state = "move"; this.stateTime = 1.8; }
         break;
       }
@@ -231,25 +279,11 @@ export class Enemy {
   }
 
   // ---------- VẼ ----------
-  /** Lớp pixelfx (fxFrame, tọa độ màn hình) — quái kích thước thường */
-  drawPixels(game, frame, cam) {
-    if (game.assets.images[this.cfg.image] || this.scaled) return;
-    const sx = Math.round(this.x - cam.rx), sy = Math.round(this.y - this.z - cam.ry);
-    if (sx < -40 || sx > cam.w + 40 || sy < -20 || sy > cam.h + 60) return;
-    if (this.actor) {
-      const bob = -Math.abs(Math.sin(this.walk * 10)) * (this.state === "aim" ? 0 : 1.5);
-      const flip = Math.cos(this.facing) < 0;
-      drawHero(painterFor(frame), this.actor, sx, sy + bob, flip, this.flash > 0 ? { tint: hex("#ffffff") } : {});
-    } else {
-      const o = this.anim.options;
-      o.x = sx; o.y = sy;
-      this.anim.draw(frame);
-    }
-  }
-
-  /** Lớp canvas (tọa độ thế giới): ảnh riêng, quái phóng to, khiên, cung, hào quang, cảnh báo */
-  drawSprite(c, game) {
-    const img = game.assets.images[this.cfg.image];
+  /**
+   * Vẽ thân quái (ctx đang ở TỌA ĐỘ THẾ GIỚI): vòng Tinh Anh / hào quang Boss dưới chân, rồi 1 ô spritesheet.
+   * Chớp trắng khi trúng đòn = cùng ô đó trên bản tô trắng của sheet (tạo sẵn 1 lần).
+   */
+  draw(c, game) {
     const x = Math.round(this.x), y = Math.round(this.y - this.z);
     if (!game.camera.inView(x, y, 90)) return;
 
@@ -269,20 +303,23 @@ export class Enemy {
       c.restore();
     }
 
+    const flip = Math.cos(this.facing) < 0, s = this.cfg.scale ?? 1;
+    const img = game.assets.images[this.cfg.image];
     if (img) {
-      // >>> ẢNH QUÁI CỦA BẠN được vẽ ở đây (chân tại this.x, this.y; quay mặt sang PHẢI)
-      const s = this.cfg.scale ?? 1;
+      // >>> ẢNH QUÁI CỦA BẠN (1 ảnh tĩnh, IMAGE_MANIFEST trong main.js) — chân tại (x, y), quay mặt sang PHẢI
       c.save();
       c.translate(x, y);
-      if (Math.cos(this.facing) < 0) c.scale(-1, 1);
+      if (flip) c.scale(-1, 1);
       c.drawImage(img, (-img.width * s) / 2, -img.height * s, img.width * s, img.height * s);
+      if (this.flash > 0) { c.globalAlpha = 0.6; c.globalCompositeOperation = "lighter"; c.drawImage(img, (-img.width * s) / 2, -img.height * s, img.width * s, img.height * s); }
       c.restore();
-    } else if (this.scaled) {
-      this.scaled.draw(c, x, y, this.cfg.scale, Math.cos(this.facing) < 0, this.flash > 0);
+      return;
     }
+    if (!this.sprite) return;
+    const sheet = this.flash > 0 ? this.sprite.flash : this.freezeT > 0 ? this.sprite.frozen : this.sprite.sheet;
+    sheet.draw(c, this.anim.col, this.anim.row, x, y, flip, s);
   }
 
-  /** Lớp phủ vẽ SAU thân quái (khiên, cung, laser ngắm, cảnh báo) — tọa độ thế giới */
   drawOverlay(c, game) {
     if (!game.camera.inView(this.x, this.y, 260)) return;
     // Mini-Boss gồng húc: vạch cảnh báo đường lướt
@@ -325,6 +362,15 @@ export class Enemy {
         c.fillRect(Math.round(fx), Math.round(this.cy - this.radius * 0.3 - h), 2, Math.round(h));
       }
     }
+    // Đóng băng: khối băng bọc quanh thân, nhấp nháy khi sắp tan
+    if (this.freezeT > 0 && (this.freezeT > 0.6 || Math.floor(game.time * 12) % 2 === 0)) {
+      const s = this.cfg.scale ?? 1, w = Math.round((this.radius + 3) * 2), h = Math.round(-this.cfg.bodyY * 1.6 * s + 6);
+      const x = Math.round(this.x - w / 2), y = Math.round(this.y - this.z - h + 2);
+      c.fillStyle = "rgba(150,225,255,0.30)"; c.fillRect(x, y, w, h);
+      c.fillStyle = "rgba(220,248,255,0.85)"; c.fillRect(x, y, w, 1); c.fillRect(x, y, 1, h);
+      c.fillStyle = "rgba(60,140,210,0.8)"; c.fillRect(x, y + h - 1, w, 1); c.fillRect(x + w - 1, y, 1, h);
+      c.fillStyle = "#ffffff"; c.fillRect(x + 2, y + 2, 2, 1); c.fillRect(x + 2, y + 3, 1, 2);
+    }
     // Bị làm chậm: phủ băng xanh + bông tuyết
     if (this.slowT > 0) {
       c.fillStyle = "rgba(124,216,255,0.28)";
@@ -349,13 +395,6 @@ export class Enemy {
     }
   }
 
-  /** Chớp trắng 0.08s khi trúng đòn (quái critter kích thước thường) */
-  drawFlash(c) {
-    if (this.flash > 0 && this.anim && !this.scaled) {
-      c.fillStyle = "rgba(255,255,255,0.7)";
-      c.beginPath(); c.arc(this.cx, this.cy, this.radius + 1, 0, TAU); c.fill();
-    }
-  }
 }
 
 /**
@@ -374,3 +413,7 @@ export function pickEnemyType(time) {
   for (const [name, w] of pool) { if ((r -= w) <= 0) return name; }
   return "slime";
 }
+
+/** Object Pool của quái (tạo sẵn 64 con rỗng) */
+Enemy.pool = new Pool(() => new Enemy(), 64);
+Enemy.serial = 0;

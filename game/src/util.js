@@ -58,12 +58,17 @@ export function segCircle(x0, y0, x1, y1, cx, cy, r) {
   return t >= 0 && t <= 1 ? t : -1;
 }
 
-/** Khoảng cách từ điểm tới đoạn thẳng (dùng cho tia laser xuyên thấu) */
-export function pointSegDist(px, py, x0, y0, x1, y1) {
+/** BÌNH PHƯƠNG khoảng cách từ điểm tới đoạn thẳng (tia laser xuyên thấu) — so với r*r, không cần căn bậc 2 */
+export function pointSegDist2(px, py, x0, y0, x1, y1) {
   const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy;
   const t = l2 ? clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1) : 0;
-  return Math.hypot(px - (x0 + t * dx), py - (y0 + t * dy));
+  const ex = px - (x0 + t * dx), ey = py - (y0 + t * dy);
+  return ex * ex + ey * ey;
 }
+export const pointSegDist = (px, py, x0, y0, x1, y1) => Math.sqrt(pointSegDist2(px, py, x0, y0, x1, y1));
+
+/** Bình phương khoảng cách — dùng trong mọi vòng lặp va chạm thay cho Math.hypot / Math.sqrt */
+export const dist2 = (ax, ay, bx, by) => (bx - ax) * (bx - ax) + (by - ay) * (by - ay);
 
 // ---------- Màu sắc: làm sáng / thêm độ trong suốt cho chuỗi "#rrggbb" ----------
 export function lighten(h, k) {

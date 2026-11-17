@@ -7,6 +7,7 @@
 // =====================================================================================
 import { WEAPONS, COMMON_WEAPONS, RARE_WEAPONS, drawWeaponFallback, weaponSpan } from "./weapons.js";
 import { pick, rand, withAlpha, TAU } from "./util.js";
+import { Pool } from "./pool.js";
 
 export const CHEST_TIERS = {
   wood:   { name: "Rương Gỗ",  body: "#73402c", dark: "#3a1f1f", band: "#925737", trim: "#b07246", glow: "#ffd28a", fx: ["#110a10", "#24131a", "#3a1f1f", "#552d24", "#73402c", "#925737", "#b07246"] },
@@ -130,19 +131,24 @@ export class Pickup {
 
 /** Ngọc kinh nghiệm xanh lam rơi từ quái */
 export class ExpOrb {
-  constructor(x, y, value) {
+  /** Lấy 1 ngọc từ Object Pool (mỗi quái chết rơi vài viên -> không `new` liên tục) */
+  static obtain(x, y, value) { return ExpOrb.pool.obtain().init(x, y, value); }
+  init(x, y, value) {
     this.x = x; this.y = y; this.value = value;
     const a = Math.random() * TAU, s = rand(30, 80);
     this.vx = Math.cos(a) * s; this.vy = Math.sin(a) * s;
     this.magnet = false;     // bị Nam Châm hút
     this.age = rand(0, 1);
     this.dead = false;
+    return this;
   }
   update(dt, game) {
     this.age += dt;
     const p = game.player;
-    const dx = p.cx - this.x, dy = p.cy - this.y, d = Math.hypot(dx, dy) || 1;
-    if (this.magnet || d < p.pickupRange) {
+    const dx = p.cx - this.x, dy = p.cy - this.y, d2 = dx * dx + dy * dy, R = p.pickupRange;
+    if (this.magnet || d2 < R * R) {
+      const d = Math.sqrt(d2) || 1;   // chỉ tính căn khi ngọc đang bị hút
+      if (d < p.radius + 4) { this.dead = true; game.gainExp(this.value); return; }
       const sp = this.magnet ? 420 : 240 + (p.pickupRange - d) * 4;
       this.vx += ((dx / d) * sp - this.vx) * Math.min(1, dt * 10);
       this.vy += ((dy / d) * sp - this.vy) * Math.min(1, dt * 10);
@@ -151,7 +157,6 @@ export class ExpOrb {
       this.vx *= k; this.vy *= k;
     }
     this.x += this.vx * dt; this.y += this.vy * dt;
-    if (d < p.radius + 4) { this.dead = true; game.gainExp(this.value); }
   }
   draw(c) {
     const x = Math.round(this.x), y = Math.round(this.y + Math.sin(this.age * 6) * 1);
@@ -162,3 +167,5 @@ export class ExpOrb {
     if (big) { c.fillStyle = "#ffffff"; c.fillRect(x - 2, y - 3, 1, 1); }
   }
 }
+
+ExpOrb.pool = new Pool(() => new ExpOrb(), 128);

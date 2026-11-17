@@ -249,10 +249,11 @@ export class World {
   isFree(x, y, r) {
     if (this.solids.some((s) => circleRect(x, y, r, s))) return false;
     if (this.pits.some((s) => circleRect(x, y, r, s))) return false;
-    if (this.pools.some((p) => Math.hypot(p.x - x, p.y - y) < p.r + r)) return false;
-    if (this.traps.some((t) => Math.hypot(t.x - x, t.y - y) < ENV.trap.r + r + 6)) return false;
-    if (this.barrels.some((b) => !b.dead && Math.hypot(b.x - x, b.y - y) < b.r + r + 4)) return false;
-    if (this.crystals.some((c) => !c.dead && Math.hypot(c.x - x, c.y - y) < c.r + r + 4)) return false;
+    const near = (ox, oy, rr) => (ox - x) * (ox - x) + (oy - y) * (oy - y) < rr * rr;   // khoảng cách bình phương
+    if (this.pools.some((p) => near(p.x, p.y, p.r + r))) return false;
+    if (this.traps.some((t) => near(t.x, t.y, ENV.trap.r + r + 6))) return false;
+    if (this.barrels.some((b) => !b.dead && near(b.x, b.y, b.r + r + 4))) return false;
+    if (this.crystals.some((c) => !c.dead && near(c.x, c.y, c.r + r + 4))) return false;
     return true;
   }
 
@@ -264,7 +265,8 @@ export class World {
    */
   moveBody(e, dx, dy, r, flying = false) {
     let blocked = false;
-    const boxes = flying ? this.solids : this.solids.concat(this.pits);
+    // (trước đây: this.solids.concat(this.pits) -> tạo mảng mới MỖI LẦN di chuyển của MỖI con quái = rác bộ nhớ)
+    const boxes = flying ? this.solids : (this.groundBoxes ??= this.solids.concat(this.pits));
     // trục X
     if (dx) {
       e.x += dx;
@@ -296,8 +298,8 @@ export class World {
   /** Đạn (hình tròn) chạm gì? -> { kind: "solid" | "barrel" | "crystal", obj } hoặc null */
   bulletHit(x, y, r) {
     for (const s of this.solids) if (circleRect(x, y, r, s)) return { kind: "solid", obj: s };
-    for (const b of this.barrels) if (!b.dead && Math.hypot(b.x - x, b.y - 6 - y) < b.r + r) return { kind: "barrel", obj: b };
-    for (const c of this.crystals) if (!c.dead && Math.hypot(c.x - x, c.y - 8 - y) < c.r + r) return { kind: "crystal", obj: c };
+    for (const b of this.barrels) if (!b.dead && (b.x - x) ** 2 + (b.y - 6 - y) ** 2 < (b.r + r) ** 2) return { kind: "barrel", obj: b };
+    for (const c of this.crystals) if (!c.dead && (c.x - x) ** 2 + (c.y - 8 - y) ** 2 < (c.r + r) ** 2) return { kind: "crystal", obj: c };
     return null;
   }
 
@@ -553,8 +555,9 @@ export class World {
 function inflate(r, m) { return { x: r.x - m, y: r.y - m, w: r.w + m * 2, h: r.h + m * 2 }; }
 
 function pushOut(e, o, r) {
-  const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy), min = o.r + r * 0.8;
-  if (d >= min) return false;
+  const dx = e.x - o.x, dy = e.y - o.y, min = o.r + r * 0.8, d2 = dx * dx + dy * dy;
+  if (d2 >= min * min) return false;          // không chạm: thoát sớm, không tính căn
+  const d = Math.sqrt(d2);
   if (d === 0) { e.x += min; return true; }
   e.x = o.x + (dx / d) * min; e.y = o.y + (dy / d) * min;
   return true;
