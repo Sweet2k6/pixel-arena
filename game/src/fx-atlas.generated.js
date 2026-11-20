@@ -969,5 +969,922 @@ export const ATLAS = {
   "loop": false,
   "anchorX": 22,
   "anchorY": 59
+ },
+ "fx:meteor": {
+  "src": "assets/images/fx/meteor.png",
+  "width": 6682,
+  "height": 207,
+  "cols": 26,
+  "rows": 1,
+  "frameW": 257,
+  "frameH": 207,
+  "frames": 26,
+  "fps": 14,
+  "loop": false,
+  "anchorX": 147,
+  "anchorY": 182
+ },
+ "fx:holyPillar": {
+  "src": "assets/images/fx/holy-pillar.png",
+  "width": 4462,
+  "height": 226,
+  "cols": 23,
+  "rows": 1,
+  "frameW": 194,
+  "frameH": 226,
+  "frames": 23,
+  "fps": 14,
+  "loop": false,
+  "anchorX": 97,
+  "anchorY": 205
+ },
+ "fx:divineShield": {
+  "src": "assets/images/fx/divine-shield.png",
+  "width": 1392,
+  "height": 52,
+  "cols": 29,
+  "rows": 1,
+  "frameW": 48,
+  "frameH": 52,
+  "frames": 29,
+  "fps": 12,
+  "loop": true,
+  "anchorX": 24,
+  "anchorY": 50
+ },
+ "fx:healRing": {
+  "src": "assets/images/fx/heal-ring.png",
+  "width": 4746,
+  "height": 118,
+  "cols": 21,
+  "rows": 1,
+  "frameW": 226,
+  "frameH": 118,
+  "frames": 21,
+  "fps": 12,
+  "loop": false,
+  "anchorX": 113,
+  "anchorY": 85
+ },
+ "fx:hammer": {
+  "src": "assets/images/fx/hammer.png",
+  "width": 2574,
+  "height": 97,
+  "cols": 18,
+  "rows": 1,
+  "frameW": 143,
+  "frameH": 97,
+  "frames": 18,
+  "fps": 20,
+  "loop": false,
+  "anchorX": 52,
+  "anchorY": 76
+ },
+ "fx:scythe": {
+  "src": "assets/images/fx/scythe.png",
+  "width": 2440,
+  "height": 62,
+  "cols": 20,
+  "rows": 1,
+  "frameW": 122,
+  "frameH": 62,
+  "frames": 20,
+  "fps": 20,
+  "loop": false,
+  "anchorX": 56,
+  "anchorY": 56
+ },
+ "fx:spinSlash": {
+  "src": "assets/images/fx/spin-slash.png",
+  "width": 3276,
+  "height": 89,
+  "cols": 18,
+  "rows": 1,
+  "frameW": 182,
+  "frameH": 89,
+  "frames": 18,
+  "fps": 24,
+  "loop": false,
+  "anchorX": 77,
+  "anchorY": 68
+ },
+ "fx:darkExplosion": {
+  "src": "assets/images/fx/dark-explosion.png",
+  "width": 4980,
+  "height": 216,
+  "cols": 20,
+  "rows": 1,
+  "frameW": 249,
+  "frameH": 216,
+  "frames": 20,
+  "fps": 14,
+  "loop": false,
+  "anchorX": 125,
+  "anchorY": 179
+ },
+ "fx:crit": {
+  "src": "assets/images/fx/crit.png",
+  "width": 3173,
+  "height": 95,
+  "cols": 19,
+  "rows": 1,
+  "frameW": 167,
+  "frameH": 95,
+  "frames": 19,
+  "fps": 24,
+  "loop": false,
+  "anchorX": 69,
+  "anchorY": 64
+ },
+ "fx:slam": {
+  "src": "assets/images/fx/slam.png",
+  "width": 4408,
+  "height": 148,
+  "cols": 19,
+  "rows": 1,
+  "frameW": 232,
+  "frameH": 148,
+  "frames": 19,
+  "fps": 14,
+  "loop": false,
+  "anchorX": 116,
+  "anchorY": 103
+ },
+ "fx:acidSplash": {
+  "src": "assets/images/fx/acid-splash.png",
+  "width": 2373,
+  "height": 98,
+  "cols": 21,
+  "rows": 1,
+  "frameW": 113,
+  "frameH": 98,
+  "frames": 21,
+  "fps": 16,
+  "loop": false,
+  "anchorX": 56,
+  "anchorY": 81
+ },
+ "fx:portal": {
+  "src": "assets/images/fx/portal.png",
+  "width": 4268,
+  "height": 130,
+  "cols": 22,
+  "rows": 1,
+  "frameW": 194,
+  "frameH": 130,
+  "frames": 22,
+  "fps": 12,
+  "loop": false,
+  "anchorX": 98,
+  "anchorY": 101
+ },
+ "fx:grasp": {
+  "src": "assets/images/fx/grasp.png",
+  "width": 2736,
+  "height": 88,
+  "cols": 24,
+  "rows": 1,
+  "frameW": 114,
+  "frameH": 88,
+  "frames": 24,
+  "fps": 14,
+  "loop": false,
+  "anchorX": 57,
+  "anchorY": 71
+ },
+ "fx:levelUp": {
+  "src": "assets/images/fx/level-up.png",
+  "width": 3744,
+  "height": 140,
+  "cols": 24,
+  "rows": 1,
+  "frameW": 156,
+  "frameH": 140,
+  "frames": 24,
+  "fps": 12,
+  "loop": false,
+  "anchorX": 78,
+  "anchorY": 115
+ },
+ "actor:paladin": {
+  "src": "assets/images/actors/paladin.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:ranger": {
+  "src": "assets/images/actors/ranger.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:necro": {
+  "src": "assets/images/actors/necro.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:ninja": {
+  "src": "assets/images/actors/ninja.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:shaman": {
+  "src": "assets/images/actors/shaman.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:eyeball": {
+  "src": "assets/images/actors/eyeball.png",
+  "width": 3213,
+  "height": 45,
+  "cols": 51,
+  "rows": 1,
+  "frameW": 63,
+  "frameH": 45,
+  "frames": 51,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 32,
+  "anchorY": 36,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 51,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:skull": {
+  "src": "assets/images/actors/skull.png",
+  "width": 3724,
+  "height": 100,
+  "cols": 38,
+  "rows": 1,
+  "frameW": 98,
+  "frameH": 100,
+  "frames": 38,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 49,
+  "anchorY": 87,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 38,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:frog": {
+  "src": "assets/images/actors/frog.png",
+  "width": 2562,
+  "height": 51,
+  "cols": 42,
+  "rows": 1,
+  "frameW": 61,
+  "frameH": 51,
+  "frames": 42,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 32,
+  "anchorY": 47,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 42,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:snake": {
+  "src": "assets/images/actors/snake.png",
+  "width": 3458,
+  "height": 19,
+  "cols": 38,
+  "rows": 1,
+  "frameW": 91,
+  "frameH": 19,
+  "frames": 38,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 44,
+  "anchorY": 16,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 38,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:slimeKing": {
+  "src": "assets/images/actors/slime-king.png",
+  "width": 2175,
+  "height": 69,
+  "cols": 29,
+  "rows": 1,
+  "frameW": 75,
+  "frameH": 69,
+  "frames": 29,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 38,
+  "anchorY": 52,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 29,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:skullLord": {
+  "src": "assets/images/actors/skull-lord.png",
+  "width": 3724,
+  "height": 100,
+  "cols": 38,
+  "rows": 1,
+  "frameW": 98,
+  "frameH": 100,
+  "frames": 38,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 49,
+  "anchorY": 87,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 38,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:eyeLord": {
+  "src": "assets/images/actors/eye-lord.png",
+  "width": 3213,
+  "height": 45,
+  "cols": 51,
+  "rows": 1,
+  "frameW": 63,
+  "frameH": 45,
+  "frames": 51,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 32,
+  "anchorY": 36,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 51,
+    "fps": 16,
+    "loop": true
+   }
+  }
+ },
+ "actor:spirit": {
+  "src": "assets/images/actors/spirit.png",
+  "width": 6477,
+  "height": 67,
+  "cols": 51,
+  "rows": 1,
+  "frameW": 127,
+  "frameH": 67,
+  "frames": 51,
+  "fps": 16,
+  "loop": true,
+  "anchorX": 64,
+  "anchorY": 58,
+  "anims": {
+   "move": {
+    "row": 0,
+    "frames": 51,
+    "fps": 16,
+    "loop": true
+   }
+  }
  }
 };

@@ -8,6 +8,13 @@
 import { SpriteSheet } from "./spritesheet.js";
 import { createBaker } from "./fxbake.js";
 
+/** Bảng màu số bay lên (tối -> sáng) */
+const TEXT_PALETTES = {
+  dmg:  ["#0c0c14", "#24243a", "#4a4a66", "#8a8aa8", "#c4c4d8", "#e4e4f0", "#f6f6ff", "#ffffff"],   // sát thương thường: TRẮNG
+  crit: ["#2a0404", "#6a0a0a", "#b01a14", "#e8401a", "#ff8a2a", "#ffd34a", "#fff2a8", "#ffffff"],   // CHÍ MẠNG: vàng -> đỏ, to hơn
+  heal: ["#04140a", "#0a3a1a", "#147a30", "#2fb84a", "#6aec6a", "#b0ffb0", "#e8ffe8", "#ffffff"],
+};
+
 class Effect {
   constructor() { this.active = false; }
   init(sheet, cfg, x, y, o, seq) {
@@ -78,23 +85,28 @@ export class EffectManager {
    * Nướng cả hiệu ứng 1 lúc tốn ~20ms (khựng 1 frame) nên ở đây nướng DẦN: mỗi frame game nướng trước vài ô,
    * luôn nhanh hơn tốc độ phát -> số hiện ra ngay mà không khựng.
    */
-  text(str, x, y) {
+  text(str, x, y, style = "dmg", scale = 1) {
     if (!this.textMod) return null;
-    let entry = this.textCache.get(str);
-    if (!entry) entry = this.prepareText(str);
-    return this.spawn(entry.sheet, entry.cfg, x, y);
+    let entry = this.textCache.get(`${style}|${str}`);
+    if (!entry) entry = this.prepareText(str, false, style);
+    return this.spawn(entry.sheet, entry.cfg, x, y, scale !== 1 ? { scale } : undefined);
   }
 
-  /** Chuẩn bị sheet cho 1 chuỗi (nướng dần). now = true: nướng xong ngay (dùng lúc màn hình tải) */
-  prepareText(str, now = false) {
-    if (this.textCache.size > 120) { this.textCache.clear(); this.baking.length = 0; }
-    const baker = createBaker(this.textMod, { options: { text: str }, fps: 30 });
+  /**
+   * Chuẩn bị sheet cho 1 chuỗi (nướng dần). now = true: nướng xong ngay (dùng lúc màn hình tải)
+   * style: "dmg" (trắng — sát thương thường) | "crit" (vàng/đỏ — CHÍ MẠNG) | "heal" (xanh lá — hồi máu)
+   */
+  prepareText(str, now = false, style = "dmg") {
+    if (this.textCache.size > 160) { this.textCache.clear(); this.baking.length = 0; }
+    const options = { text: str };
+    if (TEXT_PALETTES[style]) options.palette = TEXT_PALETTES[style];
+    const baker = createBaker(this.textMod, { options, fps: 30 });
     const canvas = document.createElement("canvas");
     canvas.width = baker.frameW * baker.frames; canvas.height = baker.frameH;
     const { frameW, frameH, cols, rows, frames, fps, anchorX, anchorY } = baker;
     const geo = { frameW, frameH, cols, rows, frames, fps, anchorX, anchorY, loop: false };
-    const entry = { sheet: new SpriteSheet(canvas, geo, `text ${str}`), cfg: { priority: 0 }, baker, g: canvas.getContext("2d") };
-    this.textCache.set(str, entry);
+    const entry = { sheet: new SpriteSheet(canvas, geo, `text ${str}`), cfg: { priority: style === "dmg" ? 0 : 1 }, baker, g: canvas.getContext("2d") };
+    this.textCache.set(`${style}|${str}`, entry);
     this.bakeStep(entry, now ? Infinity : 2);
     if (!baker.done) this.baking.push(entry);
     return entry;

@@ -141,6 +141,8 @@ export class ActorSprite {
   get flash() { return this.sheet.tinted("#ffffff", 0.9); }
   /** Bản tô xanh băng (quái bị đóng băng) */
   get frozen() { return this.sheet.tinted("#9fe6ff", 0.55); }
+  /** Bản tô đỏ (quái đang gồng đòn — cảnh báo người chơi) */
+  get hot() { return this.sheet.tinted("#ff5a3a", 0.45); }
 
   /**
    * Dáng nhân vật (frame đứng yên đầu tiên) dưới dạng "actor" của pixelfx, để hiệu ứng ôm theo thân

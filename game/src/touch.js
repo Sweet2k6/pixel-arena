@@ -3,7 +3,7 @@
 //
 //  - Nửa trái màn hình : cần điều khiển DI CHUYỂN (chạm ở đâu, cần hiện ở đó)
 //  - Nửa phải màn hình : cần NGẮM + BẮN (kéo theo hướng nào là bắn hướng đó, có hỗ trợ ngắm)
-//  - Cột nút bên phải  : Đổi súng · Kỹ năng · Lướt · Tạm dừng
+//  - Cột nút bên phải  : Đổi súng · Nhặt/Tương tác (E) · Ghép vũ khí · Kỹ năng · Lướt · Tạm dừng
 //  Kết quả ghi vào `input` (dùng chung với bàn phím/chuột trong main.js):
 //    input.joy       = { x, y }  vector di chuyển (-1..1)
 //    input.touchAim  = góc ngắm (radian) hoặc null nếu không ngắm
@@ -39,12 +39,14 @@ export class TouchControls {
       <div class="stick stick-aim idle"><div class="knob"></div><span class="stick-label">NGẮM · BẮN</span></div>
       <button type="button" class="tbtn t-pause" data-key="p" aria-label="Tạm dừng">❚❚</button>
       <button type="button" class="tbtn t-swap" data-key="q" aria-label="Đổi vũ khí">⇄<small>ĐỔI SÚNG</small></button>
+      <button type="button" class="tbtn t-use disabled" data-key="e" aria-label="Nhặt / tương tác">E<small>NHẶT</small></button>
+      <button type="button" class="tbtn t-merge hidden" data-key="g" aria-label="Ghép vũ khí">⚒<small>GHÉP</small></button>
       <button type="button" class="tbtn t-skill" data-key=" " aria-label="Kỹ năng"><span class="cd"></span>★<small>KỸ NĂNG</small></button>
       <button type="button" class="tbtn t-dash" data-key="shift" aria-label="Lướt"><span class="cd"></span>»<small>LƯỚT</small></button>
       <div class="t-pausemenu hidden">
         <p>TẠM DỪNG</p>
         <button type="button" class="btn-start t-resume">TIẾP TỤC</button>
-        <button type="button" class="btn-secondary t-home">MÀN HÌNH CHÍNH</button>
+        <button type="button" class="btn-secondary t-home">VỀ SẢNH CHỜ</button>
       </div>`;
     this.stage.append(root);
     this.root = root;
@@ -52,6 +54,7 @@ export class TouchControls {
       zl: root.querySelector(".tz-left"), zr: root.querySelector(".tz-right"),
       move: root.querySelector(".stick-move"), aim: root.querySelector(".stick-aim"),
       skill: root.querySelector(".t-skill"), dash: root.querySelector(".t-dash"), swap: root.querySelector(".t-swap"),
+      use: root.querySelector(".t-use"), merge: root.querySelector(".t-merge"),
       pauseMenu: root.querySelector(".t-pausemenu"),
     };
     this.bindStick(this.el.zl, this.el.move, (x, y, on) => {
@@ -119,7 +122,7 @@ export class TouchControls {
 
   /** Gọi mỗi frame: ẩn/hiện, vòng hồi chiêu trên nút */
   sync(game, playing) {
-    const show = playing && !game.choosing;
+    const show = playing && !game.choosing && !game.shopping;
     if (show !== this.visible) {
       this.visible = show;
       this.root.classList.toggle("hidden", !show);
@@ -128,10 +131,12 @@ export class TouchControls {
     if (!show) return;
     this.el.pauseMenu.classList.toggle("hidden", !game.paused);
     const p = game.player;
-    this.el.skill.style.setProperty("--cd", String(p.skillCd > 0 ? p.skillCd / (p.skill.cooldown * p.mods.cdMul) : 0));
+    this.el.skill.style.setProperty("--cd", String(p.skillCd > 0 ? p.skillCd / p.skillCdMax : 0));
     this.el.skill.style.setProperty("--skill", p.skill.color);
     this.el.dash.style.setProperty("--cd", String(p.rollCd / p.rollCdMax));
     this.el.swap.classList.toggle("disabled", !p.weapons[1]);
+    this.el.use.classList.toggle("disabled", !game.interactTarget);
+    this.el.merge.classList.toggle("hidden", !p.mergeable);
   }
 
   reset() {

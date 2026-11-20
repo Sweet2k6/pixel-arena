@@ -3,7 +3,7 @@
 //  Thanh EXP sát mép trên · 2 ô vũ khí · Minimap góc dưới phải · Mũi tên chỉ hướng · Thanh máu Boss
 // =====================================================================================
 import { WORLD } from "./world.js";
-import { drawWeaponIcon } from "./weapons.js";
+import { drawWeaponIcon, WEAPON_RARITY, mergeResult } from "./weapons.js";
 import { clamp, withAlpha, TAU } from "./util.js";
 
 /** Minimap: tỉ lệ 2400x1600 -> 80x53 pixel game (= 160x106 pixel màn hình ở mức phóng x2) */
@@ -45,6 +45,13 @@ export function drawShield(ctx, x, y) {
   }));
 }
 
+/** Tia sét nhỏ (biểu tượng Năng Lượng) */
+export function drawBolt(ctx, x, y) {
+  const rows = ["..XX", ".XX.", "XXXX", ".XX.", "XX..", "X..."];
+  ctx.fillStyle = "#7cc8ff";
+  rows.forEach((r, j) => [...r].forEach((ch, i) => ch === "X" && ctx.fillRect(x + i, y + j, 1, 1)));
+}
+
 /** Khung viền vàng kim kiểu HUD gốc */
 export function panel(ctx, x, y, w, h, border = "#4a4066") {
   ctx.fillStyle = "rgba(12,10,20,0.78)";
@@ -73,8 +80,18 @@ export function drawWeaponSlots(ctx, x, y, p, time) {
     if (!w) { text(ctx, "— trống —", x + 38, sy + 3, "#5a5278"); continue; }
     ctx.fillStyle = "#15111f"; ctx.fillRect(x + 10, sy + 2, 26, 9);
     drawWeaponIcon(ctx, w, x + 10, sy + 2, 26, 9, 1);
-    text(ctx, w.name, x + 39, sy + 3, active ? "#ffffff" : "#8a82a8");
+    const lab = w.label ?? w.name, cost = w.cost ?? 0;
+    const max = cost ? 17 : 22;
+    text(ctx, lab.length > max ? lab.slice(0, max - 1) + "…" : lab, x + 39, sy + 3, active ? (WEAPON_RARITY[w.rarity] ?? "#ffffff") : "#8a82a8");
+    if (cost) {   // năng lượng mỗi phát
+      const str = cost < 1 ? cost.toFixed(1).slice(1) : String(cost), tw = Math.ceil(ctx.measureText(str).width);
+      ctx.textAlign = "right"; text(ctx, str, x + 123, sy + 3, p.energy >= cost ? "#7cc8ff" : "#ff5a5a"); ctx.textAlign = "left";
+      drawBolt(ctx, x + 118 - tw, sy + 3);
+    }
+    ctx.fillStyle = WEAPON_RARITY[w.rarity] ?? "#5a5278"; ctx.fillRect(x + 10, sy + 11, 26, 1);   // vạch màu độ hiếm
   }
+  // 2 ô ghép được: viền nhấp nháy nối 2 ô
+  if (mergeResult(p.weapons[0], p.weapons[1]) && Math.floor(time * 4) % 2 === 0) { ctx.fillStyle = "#ffe26b"; ctx.fillRect(x + 125, y + 4, 2, 20); }
   ctx.font = "8px monospace";
 }
 
@@ -105,6 +122,11 @@ export function drawMinimap(ctx, W, H, game) {
   const cam = game.camera;
   ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 1;
   ctx.strokeRect(Math.round(x + cam.x * sx) + 0.5, Math.round(y + cam.y * sy) + 0.5, Math.round(cam.w * sx), Math.round(cam.h * sy));
+  // Đền thờ: chấm xanh lam (sáng khi sẵn sàng)
+  for (const s of game.world.shrines) {
+    ctx.fillStyle = s.cool > 0 ? "#3a4a6a" : "#7cf0ff";
+    ctx.fillRect(Math.round(x + s.x * sx) - 1, Math.round(y + s.y * sy) - 1, 2, 2);
+  }
   // Rương báu: chấm vàng (nhấp nháy)
   for (const c of game.chests) {
     if (c.opened) continue;
@@ -157,11 +179,12 @@ export function drawOffscreenIndicators(ctx, W, H, game) {
 /** Thanh máu lớn của Mini-Boss ở cạnh trên màn hình */
 export function drawBossBar(ctx, W, boss, time) {
   const w = 200, x = Math.round(W / 2 - w / 2), y = 14;
-  panel(ctx, x - 4, y - 4, w + 8, 20, "#7a3cc8");
+  panel(ctx, x - 4, y - 4, w + 8, 20, boss.cfg.aura ?? "#7a3cc8");
   ctx.font = "8px monospace"; ctx.textBaseline = "top"; ctx.textAlign = "center";
   text(ctx, boss.cfg.name, W / 2, y - 2, "#e0c8ff");
   ctx.textAlign = "left";
   drawBar(ctx, x, y + 8, w, 5, boss.hp / boss.maxHp, Math.sin(time * 10) > 0.8 ? "#ff7ad8" : "#c048ff", "#e8b0ff", "");
+  if (boss.hp < boss.maxHp * 0.5) { ctx.fillStyle = "#ff3b3b"; ctx.fillRect(x + w - 2, y + 8, 2, 5); }   // nửa máu: Boss nổi điên
 }
 
 /** Dòng chữ thông báo giữa màn hình (Mini-Boss xuất hiện, nhặt đồ...) */
@@ -171,7 +194,10 @@ export function drawBanners(ctx, W, H, banners) {
   for (const b of banners) {
     const a = clamp(b.life / 0.4, 0, 1);
     ctx.globalAlpha = a;
-    ctx.font = b.big ? "bold 14px monospace" : "9px monospace";
+    const size = b.big ? 14 : 9;
+    ctx.font = b.big ? `bold ${size}px monospace` : `${size}px monospace`;
+    const w = ctx.measureText(b.text).width;
+    if (w > W - 12) ctx.font = `${b.big ? "bold " : ""}${Math.max(7, Math.floor(size * (W - 12) / w))}px monospace`;   // chữ dài: tự thu nhỏ cho vừa màn hình
     text(ctx, b.text, W / 2, y, b.color);
     y += b.big ? 18 : 12;
   }

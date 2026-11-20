@@ -4,8 +4,12 @@
 //  Mỗi phần tử trong mảng CHARACTERS là 1 nhân vật. Muốn thêm nhân vật mới:
 //    1. Copy nguyên 1 khối { ... } bên dưới, dán vào cuối mảng.
 //    2. Đổi `id` (không trùng, không dấu, không khoảng trắng), tên, mô tả, chỉ số.
-//    3. Chọn `weapon.type`  : "gun" (súng bắn đạn) | "melee" (đấm/chém cận chiến) | "magic" (trượng bắn cầu năng lượng)
-//       Chọn `skill.type`   : "rage" (Cuồng Nộ) | "dash" (Lướt Xung Kích) | "nova" (Bão Cầu Năng Lượng)
+//    3. Chọn `weapon.type`  : "gun" (súng) | "melee" (đấm) | "magic" (trượng cầu năng lượng) | "frostHand" (đường băng)
+//                              | "hammer" (búa nện + choáng) | "bow" (cung xuyên) | "soul" (cầu linh hồn đuổi mục tiêu) | "shuriken" (phi tiêu nảy)
+//                              ... hoặc bất kỳ loại nào trong src/weapons.js (shotgun, laser, sniper, rocket...)
+//       Chọn `skill.type`   : "rage" (Cuồng Nộ) | "dash" (Lướt Xung Kích) | "nova" (Bão Cầu) | "shy" (Ngại Ngùng)
+//                              | "holy" (Khiên Thánh Quang) | "arrowRain" (Mưa Tên) | "summon" (Triệu Hồi Vong Linh) | "blink" (Ảnh Sát)
+//       `passive`: dòng mô tả nội tại hiển thị ở menu · `crit`: tỉ lệ chí mạng gốc (mặc định 0.05 = 5%)
 //       (logic của từng loại nằm trong main.js, mục SKILL_HANDLERS / Player.attack)
 //    4. Chèn ảnh của bạn vào 3 ô `sprite`, `weaponImg`, `skillIcon` (để "" thì game tự vẽ hình pixel thay thế).
 //       `sprite` là 1 ảnh TĨNH. Muốn nhân vật có hoạt ảnh từ SPRITESHEET của bạn: thêm khối `spritesheet`
@@ -51,7 +55,9 @@ export const CHARACTERS = [
       palette: { A: "#dde7ff", B: "#a3b8ec", C: "#6f89c9", D: "#4c619f", E: "#5b70b1", F: "#3b4b82", G: "#2d3967", J: "#1f2851", m: "#ffd34a" },
     },
 
-    stats: { hp: 6, armor: 5, speed: 95 },   // Máu, Giáp, Tốc độ (pixel/giây)
+    stats: { hp: 6, armor: 5, speed: 95, energy: 180 },   // Máu, Giáp, Tốc độ (pixel/giây), Năng Lượng tối đa
+    crit: 0.08,
+    passive: "Tay súng lão luyện: 8% chí mạng gốc.",
 
     weapon: {
       name: "Súng Lục Cũ",
@@ -97,7 +103,9 @@ export const CHARACTERS = [
       palette: { A: "#ffe3b8", B: "#f2b26e", C: "#d9853c", D: "#a95b25", E: "#b9692d", F: "#8a4519", G: "#6a3313", J: "#4a230d", m: "#ff3b4a" },
     },
 
-    stats: { hp: 9, armor: 3, speed: 118 },
+    stats: { hp: 9, armor: 3, speed: 118, energy: 140 },
+    passive: "Da thép: mỗi lần mất Máu được bất tử lâu hơn (1.1 giây).",
+    invuln: 1.1,
 
     weapon: {
       name: "Găng Sắt",
@@ -147,7 +155,9 @@ export const CHARACTERS = [
       palette: { A: "#ece0ff", B: "#bea2f2", C: "#9070d8", D: "#6649aa", E: "#7454ba", F: "#4c3489", G: "#38256b", J: "#27194f", m: "#5ef0ff" },
     },
 
-    stats: { hp: 4, armor: 8, speed: 90 },
+    stats: { hp: 4, armor: 8, speed: 90, energy: 240 },
+    passive: "Lá chắn năng lượng: Giáp tự hồi nhanh gấp rưỡi.",
+    armorRegen: { delay: 2.4, interval: 0.4 },
 
     weapon: {
       name: "Trượng Năng Lượng",
@@ -209,18 +219,20 @@ export const CHARACTERS = [
     chibi: { head: "", hair: "#2a2630", outfit: "#1e1c26", outfit2: "#1e1c26", pants: "#c8ccd8", shoes: "#3a3a48" },
     fallback: { hat: "", accent: "#7cd8ff", palette: { A: "#e8f4ff", B: "#b8d4ec", C: "#88a8cc", D: "#5c7aa4", E: "#6c88b0", F: "#465e86", G: "#34486a", J: "#24324e", m: "#7cd8ff" } },
 
-    stats: { hp: 8, armor: 7, speed: 108 },
+    stats: { hp: 7, armor: 6, speed: 104, energy: 200 },
+    passive: "Máu lạnh: quái đang đóng băng nhận thêm 20% sát thương.",
+    frozenBonus: 0.2,
 
     weapon: {
       name: "Tay Không · Đường Băng",
-      desc: "Triệu hồi đường gai băng dài xuyên qua mọi quái, đóng băng 3 giây",
+      desc: "Đường gai băng xuyên mọi quái, đóng băng 1.6 giây",
       type: "frostHand",
-      damage: 3,           // mỗi con trên đường băng trúng 1 lần
-      fireRate: 0.42,
-      range: 210,          // >>> ĐỘ DÀI ĐƯỜNG BĂNG (pixel)
+      damage: 2.4,         // mỗi con trên đường băng trúng 1 lần
+      fireRate: 0.5,
+      range: 200,          // >>> ĐỘ DÀI ĐƯỜNG BĂNG (pixel)
       width: 20,           // độ rộng vùng sát thương
       speed: 650,          // tốc độ băng lan ra (pixel/giây)
-      freeze: 3,           // giây đóng băng quái (Mini-Boss chỉ bị 1 giây)
+      freeze: 1.6,         // giây đóng băng quái (Boss tối đa 0.8s; tan băng xong miễn nhiễm 1.2s)
       color: "#a6ecff",
       sound: "iceShot",
     },
@@ -228,11 +240,178 @@ export const CHARACTERS = [
     skill: {
       type: "shy",
       name: "Ngại Ngùng",
-      desc: "Ôm mặt ngại ngùng — băng giá đóng băng rồi sấm sét xóa sổ mọi quái trên màn hình (Mini-Boss mất 30% máu). Bất tử khi đang ngại.",
-      cooldown: 10,
+      desc: "Ôm mặt ngại ngùng — băng giá đóng băng rồi sấm sét xóa sổ quái thường trên màn hình (Tinh Anh mất 50%, Boss mất 20% máu). Bất tử khi đang ngại.",
+      cooldown: 16,
       duration: 1.5,       // giây ôm mặt
-      bossDamage: 0.3,     // Mini-Boss mất 30% máu tối đa
+      eliteDamage: 0.5,    // quái Tinh Anh mất 50% máu tối đa
+      bossDamage: 0.2,     // Boss mất 20% máu tối đa
       color: "#7cd8ff",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 5 — THÁNH KỴ SĨ: trâu bò, búa nện choáng, khiên thánh bất tử + hồi máu
+  // -----------------------------------------------------------------------------------
+  {
+    id: "paladin",
+    name: "Thánh Kỵ Sĩ",
+    title: "Người gác cổng ánh sáng",
+    desc: "Giáp vàng dày, búa thánh nặng trịch nện choáng cả đám quái. Chậm chạp nhưng cực kỳ khó gục.",
+    sprite: "", weaponImg: "", skillIcon: "",
+    chibi: { head: "paladin", helm: "#f0c040", accent: "#ff4a3a", accent2: "#ffffff", outfit: "#e8e2d0", outfit2: "#c8a24a", belt: "#8a5a2a", pants: "#7a6a4a", shoes: "#3a2a1a", cape: "#c8343f", chest: "#f0c040" },
+    fallback: { hat: "helm", accent: "#f0c040", palette: { A: "#fff8e0", B: "#f0d890", C: "#d8b050", D: "#a88030", E: "#b89040", F: "#806020", G: "#5a4418", J: "#3a2c10", m: "#ff4a3a" } },
+    stats: { hp: 8, armor: 7, speed: 86, energy: 160 },
+    passive: "Phúc lành: mỗi khi lên cấp hồi 1 Máu.",
+    levelHeal: 1,
+    weapon: {
+      name: "Búa Thánh",
+      desc: "Nện xuống trước mặt, choáng quái 0.5 giây",
+      type: "hammer",
+      damage: 3.5,
+      fireRate: 0.62,
+      range: 46,           // khoảng cách tâm cú nện
+      aoe: 34,             // bán kính vùng nện
+      knockback: 280,
+      stun: 0.5,
+      color: "#ffe26b",
+      sound: "hammer",
+    },
+    skill: {
+      type: "holy",
+      name: "Khiên Thánh Quang",
+      desc: "Cột sáng thánh giáng xuống: bất tử 3 giây, hồi 2 Máu, hất văng quái xung quanh (5 sát thương) và xóa đạn địch.",
+      cooldown: 16,
+      duration: 3,
+      heal: 2,
+      damage: 5,
+      radius: 95,
+      color: "#ffd25e",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 6 — THỢ SĂN: cung xuyên thấu, chí mạng cao, Mưa Tên diện rộng
+  // -----------------------------------------------------------------------------------
+  {
+    id: "ranger",
+    name: "Thợ Săn",
+    title: "Xạ thủ rừng sâu",
+    desc: "Nhanh nhẹn, mũi tên xuyên 2 quái và hay trúng chỗ hiểm. Gọi mưa tên trút xuống bầy quái.",
+    sprite: "", weaponImg: "", skillIcon: "",
+    chibi: { head: "hood", accent: "#3e7a38", accent2: "#e8343f", skin: "#ffd2a8", outfit: "#5a7a3a", outfit2: "#7a5a34", belt: "#3a2416", pants: "#4a3a28", shoes: "#2a1c12", cape: "#2e5a2a" },
+    fallback: { hat: "hood", accent: "#3e7a38", palette: { A: "#e0f0c8", B: "#b0d090", C: "#80a860", D: "#5a7a3a", E: "#68884a", F: "#46602c", G: "#344820", J: "#243414", m: "#e8343f" } },
+    stats: { hp: 5, armor: 4, speed: 112, energy: 180 },
+    crit: 0.12,
+    passive: "Mắt diều hâu: 12% chí mạng gốc.",
+    weapon: {
+      name: "Cung Săn",
+      desc: "Tên gỗ xuyên 1 quái, +10% chí mạng. GIỮ chuột để kéo căng: tên xuyên thấu cực mạnh",
+      type: "bow",
+      charge: { time: 0.85, min: 0.18, dmg: 2 },   // >>> TÍCH LỰC: giữ 0.85s = mạnh nhất (x3 sát thương)
+      damage: 2.4,
+      fireRate: 0.42,
+      bulletSpeed: 430,
+      bulletRadius: 3,
+      pierce: 1,
+      critBonus: 0.1,
+      knockback: 110,
+      color: "#e8343f",
+      sound: "bow",
+    },
+    skill: {
+      type: "arrowRain",
+      name: "Mưa Tên",
+      desc: "Trút 30 mũi tên xuống vùng đang ngắm (bán kính 75px) trong 1.4 giây, mỗi mũi 2 sát thương + làm chậm.",
+      cooldown: 9,
+      arrows: 30,
+      duration: 1.4,
+      radius: 75,
+      range: 230,
+      damage: 2,
+      color: "#e8343f",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 7 — TỬ LINH SƯ: cầu linh hồn tự đuổi quái, triệu hồi vong linh, hút hồn hồi máu
+  // -----------------------------------------------------------------------------------
+  {
+    id: "necro",
+    name: "Tử Linh Sư",
+    title: "Kẻ gọi hồn nghĩa địa",
+    desc: "Cầu linh hồn tự bay theo quái nên không bao giờ trượt. Triệu hồi vong linh lao vào nổ tung kẻ địch.",
+    sprite: "", weaponImg: "", skillIcon: "",
+    chibi: { head: "skull", skin: "#e4f2ea", accent: "#1c3a36", eyes: "#45f0b0", outfit: "#22383a", outfit2: "#2c4a44", robe: true, belt: "#45c4a0", shoes: "#14201e", chest: "#45c4a0" },
+    fallback: { hat: "hood", accent: "#1c3a36", palette: { A: "#d8f4e8", B: "#a0d0c0", C: "#68a090", D: "#3c6a60", E: "#4a7a70", F: "#2c4a44", G: "#1e3430", J: "#122420", m: "#45f0b0" } },
+    stats: { hp: 5, armor: 6, speed: 92, energy: 220 },
+    passive: "Hút hồn: cứ 15 quái hạ gục hồi 1 Máu.",
+    soulHeal: 15,
+    weapon: {
+      name: "Trượng Linh Hồn",
+      desc: "Cầu linh hồn tự đuổi theo quái gần nhất",
+      type: "soul",
+      damage: 1.8,
+      fireRate: 0.38,
+      bulletSpeed: 190,
+      bulletRadius: 3,
+      homing: 4.5,
+      life: 2.2,
+      knockback: 70,
+      color: "#45f0b0",
+      sound: "soul",
+    },
+    skill: {
+      type: "summon",
+      name: "Triệu Hồi Vong Linh",
+      desc: "Gọi 4 vong linh bay quanh mình trong 10 giây; thấy quái là lao tới nổ tung (4 sát thương diện rộng).",
+      cooldown: 13,
+      count: 4,
+      life: 10,
+      damage: 4,
+      radius: 28,
+      color: "#45f0b0",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 8 — BÓNG ĐÊM (NINJA): cực nhanh, phi tiêu nảy, dịch chuyển chém xuyên đường
+  // -----------------------------------------------------------------------------------
+  {
+    id: "ninja",
+    name: "Bóng Đêm",
+    title: "Sát thủ vô ảnh",
+    desc: "Máu giấy nhưng nhanh như gió. Phi tiêu bật qua lại giữa các quái, Ảnh Sát lướt xuyên đội hình chém tất cả.",
+    sprite: "", weaponImg: "", skillIcon: "",
+    chibi: { head: "ninja", hair: "#26232f", accent: "#e8343f", skin: "#ffd2a8", outfit: "#2c2a38", outfit2: "#3a3848", belt: "#e8343f", pants: "#24222e", shoes: "#16141c", cape: "#e8343f" },
+    fallback: { hat: "band", accent: "#e8343f", palette: { A: "#c8c4d8", B: "#8a86a0", C: "#5a5670", D: "#3a3848", E: "#46445a", F: "#2c2a38", G: "#201e2a", J: "#14121c", m: "#e8343f" } },
+    stats: { hp: 5, armor: 3, speed: 126, energy: 160 },
+    crit: 0.18,
+    passive: "Sát thủ: 18% chí mạng gốc, Lướt (Shift) hồi nhanh hơn 30%.",
+    rollCut: 0.3,
+    weapon: {
+      name: "Phi Tiêu",
+      desc: "Ném cực nhanh, mỗi phi tiêu bật sang 1 quái khác",
+      type: "shuriken",
+      damage: 1.25,
+      fireRate: 0.19,
+      bulletSpeed: 400,
+      bulletRadius: 3,
+      ricochet: 1,
+      spread: 0.05,
+      life: 1.1,
+      knockback: 60,
+      color: "#e8343f",
+      sound: "shuriken",
+    },
+    skill: {
+      type: "blink",
+      name: "Ảnh Sát",
+      desc: "Dịch chuyển tức thời 150px về hướng ngắm, chém mọi quái trên đường đi (6 sát thương, +50% chí mạng). Bất tử khi lướt.",
+      cooldown: 5,
+      range: 150,
+      damage: 6,
+      width: 18,
+      color: "#e8343f",
     },
   },
 ];

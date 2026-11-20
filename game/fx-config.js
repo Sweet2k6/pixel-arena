@@ -39,6 +39,26 @@ import * as fxZap from "../pixelfx-main/src/fx/lightning/zap-hit.js";
 import * as fxFrostNova from "../pixelfx-main/src/fx/ice/frost-nova.js";
 import * as fxSnowflake from "../pixelfx-main/src/fx/ice/snowflake-burst.js";
 import * as fxIceSpikes from "../pixelfx-main/src/fx/ice/ice-spikes.js";
+// --- bản 3.0: hiệu ứng cho nhân vật / vũ khí / quái / bản đồ mới ---
+import * as fxMeteor from "../pixelfx-main/src/fx/fire/meteor.js";
+import * as fxHolyPillar from "../pixelfx-main/src/fx/holy/holy-pillar.js";
+import * as fxDivineShield from "../pixelfx-main/src/fx/holy/divine-shield.js";
+import * as fxHealAoe from "../pixelfx-main/src/fx/holy/heal-aoe.js";
+import * as fxHammer from "../pixelfx-main/src/fx/melee/hammer-smash.js";
+import * as fxScythe from "../pixelfx-main/src/fx/melee/scythe-reap.js";
+import * as fxSpinSlash from "../pixelfx-main/src/fx/melee/spin-slash.js";
+import * as fxDarkExplosion from "../pixelfx-main/src/fx/shadow/dark-explosion.js";
+import * as fxGrasp from "../pixelfx-main/src/fx/shadow/grasping-hands.js";
+import * as fxCrit from "../pixelfx-main/src/fx/impacts/crit-hit.js";
+import * as fxSlam from "../pixelfx-main/src/fx/impacts/ground-slam.js";
+import * as fxAcid from "../pixelfx-main/src/fx/nature/acid-splash.js";
+import * as fxPortal from "../pixelfx-main/src/fx/spawn/spawn-portal.js";
+import * as fxLevelUp from "../pixelfx-main/src/fx/ui/level-up.js";
+import * as fxEyeball from "../pixelfx-main/src/fx/critters/eyeball.js";
+import * as fxSkull from "../pixelfx-main/src/fx/critters/flying-skull.js";
+import * as fxFrog from "../pixelfx-main/src/fx/critters/frog.js";
+import * as fxSnake from "../pixelfx-main/src/fx/critters/snake.js";
+import * as fxWisp from "../pixelfx-main/src/fx/critters/wisp.js";
 import { CHARACTERS } from "./characters.js";
 import { WEAPONS } from "./src/weapons.js";
 
@@ -46,6 +66,8 @@ import { WEAPONS } from "./src/weapons.js";
 export const MAX_EFFECTS = 150;
 
 const ICE = ["#151a3d", "#212f6b", "#2c58aa", "#3a8bd8", "#62c8f4", "#a6ecff", "#ffffff"];
+const GOLD = ["#3b1d2a", "#7a3a2c", "#c4652e", "#f0a040", "#ffd25e", "#fff0a0", "#fffbe0", "#ffffff"];
+const NECRO = ["#04100e", "#0a2a24", "#0f4a3a", "#16805f", "#45c4a0", "#9af0c8", "#ffffff"];
 const MONK_SLASH = CHARACTERS.find((c) => c.id === "monk")?.weapon.slashPalette;
 const SWORD_SLASH = WEAPONS.sword.slashPalette;
 
@@ -90,6 +112,25 @@ export const EFFECTS = {
   chestWood:     { src: "assets/images/fx/chest-wood.png",     pixelfx: fxChestOpen, options: { wood: ["#110a10", "#24131a", "#3a1f1f", "#552d24", "#73402c", "#925737", "#b07246"], coins: 8 },  bake: { fps: 15, maxTime: 2.4 }, play: { priority: 3 } },
   chestSilver:   { src: "assets/images/fx/chest-silver.png",   pixelfx: fxChestOpen, options: { wood: ["#10141e", "#232a3c", "#323a50", "#465068", "#6c7792", "#8492aa", "#b4bfd0"], coins: 8 },  bake: { fps: 15, maxTime: 2.4 }, play: { priority: 3 } },
   chestGold:     { src: "assets/images/fx/chest-gold.png",     pixelfx: fxChestOpen, options: { wood: ["#1e1206", "#4a2c08", "#86520c", "#c48412", "#f0b424", "#ffe066", "#fff6c4"], coins: 16 }, bake: { fps: 15, maxTime: 2.4 }, play: { priority: 3 } },
+  // ---------------- BẢN 3.0 ----------------
+  // Trượng Thiên Thạch + sự kiện Mưa Thiên Thạch (thiên thạch chạm đất ở giây ~METEOR_IMPACT)
+  meteor:        { src: "assets/images/fx/meteor.png",         pixelfx: fxMeteor, bake: { fps: 14, maxTime: 1.8 }, play: { priority: 3 } },
+  // Thánh Kỵ Sĩ: cột sáng, khiên vàng (lặp), búa nện; vòng hồi máu
+  holyPillar:    { src: "assets/images/fx/holy-pillar.png",    pixelfx: fxHolyPillar, bake: { fps: 14, maxTime: 1.6 }, play: { priority: 3 } },
+  divineShield:  { src: "assets/images/fx/divine-shield.png",  pixelfx: fxDivineShield, options: { radius: 18 }, bake: { fps: 12 }, play: { priority: 3 } },
+  healRing:      { src: "assets/images/fx/heal-ring.png",      pixelfx: fxHealAoe, bake: { fps: 12, maxTime: 1.7 }, play: { priority: 2 } },
+  hammer:        { src: "assets/images/fx/hammer.png",         pixelfx: fxHammer, options: { palette: GOLD }, bake: { fps: 20, maxTime: 0.9 }, play: { rotate: true, priority: 2 } },
+  // Lưỡi Hái, Ảnh Sát (ninja)
+  scythe:        { src: "assets/images/fx/scythe.png",         pixelfx: fxScythe, bake: { fps: 20, maxTime: 1.0 }, play: { rotate: true, priority: 2 } },
+  spinSlash:     { src: "assets/images/fx/spin-slash.png",     pixelfx: fxSpinSlash, options: { palette: ["#2a0510", "#5c0a1c", "#a3142a", "#e0302c", "#ff7a6a", "#ffd0cc", "#ffffff"] }, bake: { fps: 24 }, play: { priority: 2 } },
+  // Nổ bóng tối (vong linh nổ, Boss gục), chí mạng, Vua Slime đáp đất, mây axit, cổng triệu hồi, bàn tay ma
+  darkExplosion: { src: "assets/images/fx/dark-explosion.png", pixelfx: fxDarkExplosion, bake: { fps: 14, maxTime: 1.4 }, play: { priority: 3 } },
+  crit:          { src: "assets/images/fx/crit.png",           pixelfx: fxCrit, options: { height: 0 }, bake: { fps: 24 }, play: { rotate: true, priority: 2 } },
+  slam:          { src: "assets/images/fx/slam.png",           pixelfx: fxSlam, bake: { fps: 14, maxTime: 1.3 }, play: { priority: 3 } },
+  acidSplash:    { src: "assets/images/fx/acid-splash.png",    pixelfx: fxAcid, bake: { fps: 16, maxTime: 1.3 }, play: { priority: 2 } },
+  portal:        { src: "assets/images/fx/portal.png",         pixelfx: fxPortal, bake: { fps: 12, maxTime: 1.8 }, play: { priority: 2 } },
+  grasp:         { src: "assets/images/fx/grasp.png",          pixelfx: fxGrasp, bake: { fps: 14, maxTime: 1.7 }, play: { priority: 2 } },
+  levelUp:       { src: "assets/images/fx/level-up.png",       pixelfx: fxLevelUp, bake: { fps: 12, maxTime: 2.0 }, play: { priority: 3 } },
 };
 
 // =====================================================================================
@@ -110,9 +151,11 @@ export const LOOKS = {
   knight: { head: "helm", helm: "#9aa6be", eyes: "#ffd34a", outfit: "#6c7792", outfit2: "#8492aa", belt: "#8a5a2a", pants: "#465068", shoes: "#232a3c", chest: "#8a2a2a" },
 };
 export const BOSS_PALETTE = ["#140a24", "#2c1450", "#4c2488", "#7a3cc8", "#a874f0", "#d8b8ff", "#ffffff"];
+/** Pháp Sư Xương (quái triệu hồi) */
+LOOKS.shaman = { head: "wizard", hair: "#e8e8e8", accent: "#2a2438", accent2: "#7cf0a0", skin: "#c8d8c0", outfit: "#3a3048", outfit2: "#4a3c5c", robe: true, belt: "#7cf0a0", shoes: "#1a1420", eyes: "#ff3030" };
 
 export const ACTORS = {
-  // 3 nhân vật chơi được (ngoại hình lấy từ khối `fallback` trong characters.js)
+  // các nhân vật chơi được (ngoại hình chibi lấy từ khối `chibi` trong characters.js)
   ...Object.fromEntries(CHARACTERS.map((c) => [c.id, c.spritesheet
     ? { kind: "sheet", ...c.spritesheet }
     : { kind: "chibi", src: `assets/images/actors/${c.id}.png`, look: c.chibi }])),
@@ -124,4 +167,15 @@ export const ACTORS = {
   bat:    { kind: "critter", src: "assets/images/actors/bat.png",   pixelfx: fxBat,   options: {},          bake: { fps: 20 } },
   ghost:  { kind: "critter", src: "assets/images/actors/ghost.png", pixelfx: fxGhost, options: { hover: 6 }, bake: { fps: 20 } },
   boss:   { kind: "critter", src: "assets/images/actors/boss.png",  pixelfx: fxGhost, options: { hover: 6, palette: BOSS_PALETTE }, bake: { fps: 20 } },
+  // ---------------- QUÁI & BOSS MỚI (bản 3.0) ----------------
+  shaman:    { kind: "chibi",   src: "assets/images/actors/shaman.png",     look: LOOKS.shaman },
+  eyeball:   { kind: "critter", src: "assets/images/actors/eyeball.png",    pixelfx: fxEyeball, options: { hover: 10 }, bake: { fps: 16 } },
+  skull:     { kind: "critter", src: "assets/images/actors/skull.png",      pixelfx: fxSkull,   options: { hover: 8 },  bake: { fps: 16 } },
+  frog:      { kind: "critter", src: "assets/images/actors/frog.png",       pixelfx: fxFrog,    options: {},            bake: { fps: 16 } },
+  snake:     { kind: "critter", src: "assets/images/actors/snake.png",      pixelfx: fxSnake,   options: {},            bake: { fps: 16 } },
+  slimeKing: { kind: "critter", src: "assets/images/actors/slime-king.png", pixelfx: fxSlime,   options: { hop: 8, palette: ["#1a0610", "#3a0c1e", "#6a1430", "#a82a3a", "#e0504a", "#ffa070", "#fff0d0"] }, bake: { fps: 16 } },
+  skullLord: { kind: "critter", src: "assets/images/actors/skull-lord.png", pixelfx: fxSkull,   options: { hover: 8, palette: ["#120a33", "#2a1b78", "#4630c0", "#5a62f0", "#58a6ff", "#9ed8ff", "#c8f0ff", "#e4f6ff", "#ffffff"] }, bake: { fps: 16 } },
+  eyeLord:   { kind: "critter", src: "assets/images/actors/eye-lord.png",   pixelfx: fxEyeball, options: { hover: 10, iris: ["#2a0408", "#6a0c14", "#b01a20", "#f04a3a", "#ffd0a0"] }, bake: { fps: 16 } },
+  // vong linh của Tử Linh Sư
+  spirit:    { kind: "critter", src: "assets/images/actors/spirit.png",     pixelfx: fxWisp,    options: { hover: 6, palette: NECRO }, bake: { fps: 16 } },
 };

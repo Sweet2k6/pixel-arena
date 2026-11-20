@@ -20,97 +20,120 @@
     <canvas id="game" width="480" height="270" tabindex="-1"></canvas>
 
     <!-- ============================================================================
-         MÀN HÌNH CHÍNH (MENU) — ảnh nền đặt tại game/assets/menu-bg.png (xem style.css, mục #menu)
+         SẢNH CHỜ (LOBBY) — căn phòng được vẽ trên canvas (src/lobby.js); các lớp HTML bên dưới phủ lên trên:
+         thanh trên cùng (Ngọc, Luật chơi, Âm thanh), thẻ thông tin nhân vật, nút Vào Trận Nhanh, các bảng
+         Kho Vũ Khí / Bàn Nâng Cấp / Cổng Dịch Chuyển.
          ============================================================================ -->
-    <section id="menu" class="screen hidden" aria-label="Màn hình chính">
-      <div class="torch torch-left" aria-hidden="true"></div>
-      <div class="torch torch-right" aria-hidden="true"></div>
-
-      <header class="menu-header">
+    <section id="menu" class="screen lobby hidden" aria-label="Sảnh chờ">
+      <header class="lobby-bar">
         <!-- Tên game: vẽ bằng font pixel trong main.js (MenuUI.buildTitle). Đổi chữ ở đó. -->
         <canvas id="title-canvas" class="title-canvas" aria-label="Pixel Arena"></canvas>
-        <p class="subtitle">Chọn người hùng · Xông vào hầm ngục</p>
+        <div class="gem-count" title="Ngọc — nhận sau mỗi trận, dùng ở Bàn Nâng Cấp & Kho Vũ Khí"><i class="ico-gem"></i><b id="gem-count">0</b><small>NGỌC</small></div>
+        <button id="rules-btn" class="btn-rules" type="button" aria-label="Luật chơi">?<small>LUẬT CHƠI</small></button>
+        <button id="mute-btn" class="btn-icon" type="button" aria-label="Bật/Tắt âm thanh">🔊</button>
       </header>
 
-      <div class="menu-body">
-        <!-- Khu vực chọn nhân vật: các thẻ nhân vật được tạo tự động từ CHARACTERS (characters.js) -->
-        <div class="showcase">
-          <div class="roster-row">
-            <button id="prev-btn" class="nav-arrow" type="button" aria-label="Nhân vật trước">&lt;</button>
-            <div id="roster" class="roster"></div>
-            <button id="next-btn" class="nav-arrow" type="button" aria-label="Nhân vật sau">&gt;</button>
-          </div>
-          <p class="hint">Click vào nhân vật · <kbd>&larr;</kbd> <kbd>&rarr;</kbd> để đổi · Nháy đúp để vào trận</p>
+      <!-- Thẻ thông tin nhân vật (kiểu Soul Knight) — hiện khi đứng gần 1 nhân vật / vừa đổi nhân vật -->
+      <aside id="info-card" class="info-panel info-card hidden" aria-live="polite">
+        <div class="info-head">
+          <h2 id="info-name">—</h2>
+          <span id="info-title" class="info-title"></span>
         </div>
-
-        <!-- Bảng thông tin & kỹ năng (kiểu Soul Knight) — nội dung do main.js điền khi chọn nhân vật -->
-        <aside class="info-panel" aria-live="polite">
-          <div class="info-head">
-            <h2 id="info-name">—</h2>
-            <span id="info-title" class="info-title"></span>
+        <p id="info-desc" class="info-desc"></p>
+        <p class="info-passive"><b>Nội tại:</b> <span id="info-passive">—</span></p>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-label"><i class="ico ico-hp"></i>Máu</span>
+            <div class="stat-track"><div id="stat-hp" class="stat-fill fill-hp"></div></div>
+            <span id="stat-hp-val" class="stat-val">0</span>
           </div>
-          <p id="info-desc" class="info-desc"></p>
+          <div class="stat">
+            <span class="stat-label"><i class="ico ico-armor"></i>Giáp</span>
+            <div class="stat-track"><div id="stat-armor" class="stat-fill fill-armor"></div></div>
+            <span id="stat-armor-val" class="stat-val">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label"><i class="ico ico-speed"></i>Tốc độ</span>
+            <div class="stat-track"><div id="stat-speed" class="stat-fill fill-speed"></div></div>
+            <span id="stat-speed-val" class="stat-val">0</span>
+          </div>
+          <p class="stat-note">Kỷ lục nhân vật: <b id="info-best">0</b> · Nâng cấp: <b id="info-ups">—</b></p>
+        </div>
+        <div class="slot-row">
+          <div class="slot-box weapon-box"><canvas id="weapon-icon" width="26" height="13"></canvas></div>
+          <div class="slot-text">
+            <span class="slot-kicker">Vũ khí khởi đầu · 0 năng lượng</span>
+            <strong id="weapon-name">—</strong>
+            <span id="weapon-desc" class="slot-desc"></span>
+          </div>
+        </div>
+        <div class="slot-row skill-row">
+          <div class="slot-box skill-box"><canvas id="skill-icon" width="20" height="20"></canvas></div>
+          <div class="slot-text">
+            <span class="slot-kicker">Kỹ năng · <kbd>Space</kbd> / Chuột phải <span class="cd-badge">⏱ <span id="skill-cd">0s</span></span></span>
+            <strong id="skill-name">—</strong>
+            <span id="skill-desc" class="slot-desc"></span>
+          </div>
+        </div>
+        <p id="info-hint" class="info-hint">Bấm <kbd>E</kbd> để điều khiển nhân vật này</p>
+      </aside>
 
-          <div class="stats">
-            <div class="stat">
-              <span class="stat-label"><i class="ico ico-hp"></i>Máu</span>
-              <div class="stat-track"><div id="stat-hp" class="stat-fill fill-hp"></div></div>
-              <span id="stat-hp-val" class="stat-val">0</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label"><i class="ico ico-armor"></i>Giáp</span>
-              <div class="stat-track"><div id="stat-armor" class="stat-fill fill-armor"></div></div>
-              <span id="stat-armor-val" class="stat-val">0</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label"><i class="ico ico-speed"></i>Tốc độ</span>
-              <div class="stat-track"><div id="stat-speed" class="stat-fill fill-speed"></div></div>
-              <span id="stat-speed-val" class="stat-val">0</span>
-            </div>
-            <p class="stat-note">Giáp tự hồi phục nếu không nhận sát thương trong vài giây.</p>
+      <button id="quick-btn" class="btn-start btn-quick" type="button">VÀO TRẬN NHANH<small id="quick-sub">ENTER</small></button>
+
+      <!-- Bảng dùng chung cho 3 trạm trong phòng -->
+      <div id="lobby-panel" class="lobby-modal hidden" role="dialog" aria-modal="true" aria-labelledby="lp-title">
+        <div class="lp-card">
+          <header class="lp-head">
+            <h2 id="lp-title">—</h2>
+            <span class="gem-count small"><i class="ico-gem"></i><b id="lp-gems">0</b></span>
+            <button id="lp-close" class="btn-icon" type="button" aria-label="Đóng">✕</button>
+          </header>
+
+          <!-- KHO VŨ KHÍ: chế tạo bằng Ngọc + chọn vũ khí phụ -->
+          <div id="lp-armory" class="lp-body hidden">
+            <p class="lp-sub">Dùng <b>Ngọc</b> chế tạo vũ khí, rồi chọn 1 khẩu làm <b>VŨ KHÍ PHỤ</b> (ô 2) mang vào trận. Vũ khí tốn <b class="c-energy">Năng Lượng</b> mỗi phát (cận chiến miễn phí).</p>
+            <div id="armory-grid" class="armory-grid"></div>
+            <h3 class="lp-h3">⚒ Công thức GHÉP trong trận <small>(2 khẩu cùng ★2 trở lên)</small></h3>
+            <ul id="recipe-list" class="recipe-list"></ul>
           </div>
 
-          <div class="slot-row">
-            <div class="slot-box weapon-box"><canvas id="weapon-icon" width="26" height="13"></canvas></div>
-            <div class="slot-text">
-              <span class="slot-kicker">Vũ khí khởi đầu</span>
-              <strong id="weapon-name">—</strong>
-              <span id="weapon-desc" class="slot-desc"></span>
-            </div>
+          <!-- BÀN NÂNG CẤP: nâng chỉ số vĩnh viễn từng nhân vật -->
+          <div id="lp-upgrade" class="lp-body hidden">
+            <p class="lp-sub">Nâng cấp <b>vĩnh viễn</b> cho <b id="up-char" class="c-gold">—</b> — mỗi nhân vật nâng riêng. Ngọc nhận được sau mỗi trận (càng nhiều điểm, đợt, Boss càng nhiều Ngọc).</p>
+            <div id="upgrade-list" class="upgrade-list"></div>
           </div>
 
-          <div class="slot-row skill-row">
-            <div class="slot-box skill-box"><canvas id="skill-icon" width="20" height="20"></canvas></div>
-            <div class="slot-text">
-              <span class="slot-kicker">Kỹ năng · <kbd>Space</kbd> / Chuột phải <span class="cd-badge">⏱ <span id="skill-cd">0s</span></span></span>
-              <strong id="skill-name">—</strong>
-              <span id="skill-desc" class="slot-desc"></span>
+          <!-- CỔNG DỊCH CHUYỂN: chọn bản đồ & độ khó -->
+          <div id="lp-portal" class="lp-body hidden">
+            <p class="lp-sub">Chọn nơi xuất trận cho <b id="portal-char" class="c-gold">—</b>. Phím <kbd>←</kbd><kbd>→</kbd>: bản đồ · <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: vào trận.</p>
+            <div class="portal-row">
+              <div class="map-picker" aria-label="Chọn bản đồ">
+                <button id="map-prev" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ trước">&lt;</button>
+                <div class="map-info">
+                  <canvas id="map-preview" width="40" height="22" aria-hidden="true"></canvas>
+                  <div class="map-text">
+                    <span class="slot-kicker">Bản đồ</span>
+                    <strong id="map-name">—</strong>
+                    <span id="map-desc" class="map-desc"></span>
+                  </div>
+                </div>
+                <button id="map-next" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ sau">&gt;</button>
+              </div>
+              <div class="diff-picker" aria-label="Chọn độ khó">
+                <button id="diff-prev" class="nav-arrow map-arrow" type="button" aria-label="Độ khó trước">&lt;</button>
+                <div class="diff-info">
+                  <span class="slot-kicker">Độ khó</span>
+                  <strong id="diff-name">Thường</strong>
+                  <span id="diff-desc" class="map-desc"></span>
+                </div>
+                <button id="diff-next" class="nav-arrow map-arrow" type="button" aria-label="Độ khó sau">&gt;</button>
+              </div>
             </div>
+            <p id="portal-loadout" class="lp-sub portal-loadout"></p>
+            <button id="start-btn" class="btn-start portal-start" type="button">VÀO TRẬN<small>START</small></button>
           </div>
-        </aside>
+        </div>
       </div>
-
-      <footer class="menu-footer">
-        <button id="mute-btn" class="btn-icon" type="button" aria-label="Bật/Tắt âm thanh">🔊</button>
-        <span class="controls controls-touch">Cần trái: di chuyển · Cần phải: ngắm &amp; bắn · Nút bên phải: Kỹ năng / Lướt / Đổi súng</span>
-        <span class="controls controls-desktop">WASD di chuyển · Chuột trái tấn công · Space/Chuột phải kỹ năng · <kbd>Shift</kbd> lướt · <kbd>Q</kbd>/lăn chuột đổi súng · P tạm dừng · M tắt tiếng</span>
-
-        <!-- Bộ chọn BẢN ĐỒ (4 biome, định nghĩa trong src/world.js -> BIOMES). Phím ↑ ↓ cũng đổi được. -->
-        <div class="map-picker" aria-label="Chọn bản đồ">
-          <button id="map-prev" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ trước">&lt;</button>
-          <div class="map-info">
-            <canvas id="map-preview" width="40" height="22" aria-hidden="true"></canvas>
-            <div class="map-text">
-              <span class="slot-kicker">Bản đồ <kbd>↑</kbd><kbd>↓</kbd></span>
-              <strong id="map-name">—</strong>
-              <span id="map-desc" class="map-desc"></span>
-            </div>
-          </div>
-          <button id="map-next" class="nav-arrow map-arrow" type="button" aria-label="Bản đồ sau">&gt;</button>
-        </div>
-
-        <button id="start-btn" class="btn-start" type="button">VÀO TRẬN<small>START</small></button>
-      </footer>
     </section>
 
     <!-- ============================================================================
@@ -128,11 +151,16 @@
           <div><dt>Sống sót</dt><dd id="go-time">0s</dd></div>
           <div><dt>Map đã chơi</dt><dd id="go-map" class="dd-text">—</dd></div>
           <div><dt>Cấp độ đạt được</dt><dd id="go-level">1</dd></div>
+          <div><dt>Đợt · Boss hạ</dt><dd id="go-wave">1</dd></div>
+          <div><dt>Combo cao nhất</dt><dd id="go-combo">0</dd></div>
+          <div><dt>Ngọc nhận được</dt><dd id="go-gems" class="c-gem">+0</dd></div>
+          <div><dt>Vàng đã nhặt</dt><dd id="go-gold" class="c-gold">0</dd></div>
           <div class="span-2"><dt>Vũ khí sử dụng</dt><dd id="go-weapons" class="dd-text">—</dd></div>
+          <div class="span-2"><dt>Thẻ nâng cấp</dt><dd id="go-perks" class="dd-text">—</dd></div>
         </dl>
         <div class="go-buttons">
           <button id="retry-btn" class="btn-start" type="button">CHƠI LẠI<small>Enter</small></button>
-          <button id="home-btn" class="btn-secondary" type="button">MÀN HÌNH CHÍNH<small>Esc</small></button>
+          <button id="home-btn" class="btn-secondary" type="button">VỀ SẢNH<small>Esc</small></button>
         </div>
       </div>
     </section>
@@ -143,8 +171,87 @@
     <section id="levelup" class="screen hidden" aria-label="Lên cấp">
       <div class="lv-card">
         <h2 class="lv-title">LÊN CẤP <span id="lv-num">2</span>!</h2>
-        <p class="lv-sub">Chọn 1 thẻ nâng cấp · click hoặc phím <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+        <p class="lv-sub">Chọn 1 thẻ nâng cấp · click hoặc phím <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · mỗi thẻ có giới hạn cấp</p>
         <div id="perk-list" class="perk-list"></div>
+        <button id="reroll-btn" class="btn-secondary btn-reroll" type="button">ĐỔI BỘ THẺ<small>R · còn <span id="reroll-left">3</span> lần</small></button>
+      </div>
+    </section>
+
+    <!-- ============================================================================
+         THƯƠNG NHÂN BÍ ẨN — mở bằng E khi đứng cạnh Thương Nhân (game tạm dừng). Hàng hóa: src/shop.js
+         ============================================================================ -->
+    <section id="shop" class="screen hidden" aria-label="Thương nhân">
+      <div class="lv-card shop-card">
+        <h2 class="lv-title shop-title">THƯƠNG NHÂN BÍ ẨN</h2>
+        <p class="lv-sub">Vàng: <b id="shop-gold" class="c-gold">0</b> · click hoặc phím <kbd>1</kbd>–<kbd>4</kbd> để mua · <kbd>E</kbd> / <kbd>Esc</kbd>: rời quầy</p>
+        <div id="shop-list" class="perk-list shop-list"></div>
+        <p id="shop-msg" class="shop-msg">&nbsp;</p>
+        <button id="shop-close" class="btn-secondary" type="button">RỜI QUẦY<small>E / Esc</small></button>
+      </div>
+    </section>
+
+    <!-- ============================================================================
+         LUẬT CHƠI — mở từ nút "?" ở Màn hình chính
+         ============================================================================ -->
+    <section id="rules" class="screen hidden" aria-label="Luật chơi">
+      <div class="rules-card">
+        <header class="rules-head">
+          <h2>LUẬT CHƠI</h2>
+          <button id="rules-close" class="btn-icon" type="button" aria-label="Đóng">✕</button>
+        </header>
+        <div class="rules-body">
+          <section>
+            <h3>🏠 Sảnh chờ</h3>
+            <p>Đi lại trong phòng bằng <kbd>WASD</kbd> (điện thoại: chạm sàn). Lại gần nhân vật khác + <kbd>E</kbd> (hoặc click) để <b>đổi nhân vật</b>.</p>
+            <p><b>Kho Vũ Khí</b> (góc trái): dùng <b class="c-gem">Ngọc</b> chế tạo vũ khí, chọn 1 khẩu làm vũ khí phụ mang vào trận · <b>Bàn Nâng Cấp</b> (góc phải): nâng Máu / Giáp / Hồi chiêu / Vũ khí khởi đầu cho từng nhân vật · <b>Cổng Dịch Chuyển</b>: chọn bản đồ, độ khó rồi xuất trận. Nút <b>Vào Trận Nhanh</b> / <kbd>Enter</kbd> để đi ngay.</p>
+            <p><b class="c-gem">Ngọc</b> nhận sau mỗi trận theo điểm, số đợt và số Boss đã hạ — được lưu vĩnh viễn.</p>
+          </section>
+          <section>
+            <h3>🎯 Mục tiêu</h3>
+            <p>Sống sót càng lâu càng tốt và ghi thật nhiều điểm. Hết Máu là thua (trừ khi có thẻ <b>Lông Phượng Hoàng</b>). <b>Giáp</b> đỡ đòn trước Máu và tự hồi nếu không trúng đòn vài giây.</p>
+          </section>
+          <section>
+            <h3>🌊 Đợt quái, Boss &amp; Báo hiệu</h3>
+            <p>Mỗi <b>đợt dài 60 giây</b>, hết đợt thì 1 <b>BOSS</b> xuất hiện (luân phiên 4 Boss). Mỗi đợt quái <b>+16% máu, +3% tốc độ</b>. Boss trước chưa gục thì Boss sau chưa tới.</p>
+            <p>🎯 <b>0.5 giây trước khi quái hiện ra</b>, 1 <b class="c-red">vòng ngắm đỏ</b> xuất hiện dưới đất đúng chỗ đó (Boss: vòng to, 1 giây) — tránh xa hoặc chờ sẵn để đánh!</p>
+            <p><b>Quái Tinh Anh</b> to hơn, viền phát sáng, x3 máu và có <b>tố chất</b>: <span class="c-red">Cuồng Phong</span> (lao nhanh) · <span style="color:#c84aff">Bão Đạn</span> (bắn vòng đạn) · <span style="color:#5fdc5f">Bất Tử</span> (tự hồi máu) · <span style="color:#ff8a2a">Bạo Liệt</span> (chết thì nổ cầu lửa). Hạ được rơi nhiều Vàng, Năng Lượng và Rương Bạc.</p>
+          </section>
+          <section>
+            <h3>⚡ Năng Lượng &amp; Vàng</h3>
+            <p>Thanh <b class="c-energy">xanh dương</b> là Năng Lượng: vũ khí khởi đầu và vũ khí cận chiến <b>miễn phí</b>, vũ khí mạnh tốn năng lượng mỗi phát (số ở ô vũ khí). Năng lượng tự hồi chậm; quái và <b>lọ năng lượng</b> rơi <b>ngọc xanh</b> tự bay về khi lại gần.</p>
+            <p><b class="c-gold">Vàng</b> rơi từ quái, thùng gỗ, rương — tiêu ở <b>Thương Nhân Bí Ẩn</b> (hiện ra sau khi hạ Boss) và <b>Tượng Thần</b> (sự kiện: dâng vàng nhận bùa 30 giây).</p>
+          </section>
+          <section>
+            <h3>🗡️ Vũ khí</h3>
+            <p>5 độ hiếm: <span class="r-common">Thường</span> · <span class="r-rare">Hiếm</span> · <span class="r-epic">Sử Thi</span> · <span class="r-legend">Huyền Thoại</span> · <span class="r-mythic">Thần Thoại</span>. Mang tối đa <b>2 vũ khí</b> (<kbd>Q</kbd> / lăn chuột / <kbd>1</kbd> <kbd>2</kbd>). Vũ khí rơi trên đất: lại gần bấm <kbd>E</kbd> để nhặt (đầy 2 ô thì đổi chỗ khẩu đang cầm).</p>
+            <p><b>Cận chiến</b> (găng, kiếm, búa, lưỡi hái): đánh liên tiếp thành <b>combo 3 đòn</b> — đòn 3 quét rộng, hất văng, luôn chí mạng. Mọi nhát chém <b>phản đạn</b> của quái bay ngược lại!</p>
+            <p><b>Tích lực</b> (cung, Búa Sấm Sét, Pháo Năng Lượng): <b>giữ chuột</b> để tụ lực (vòng sáng quanh chân), <b>thả ra</b> tung đòn xuyên thấu cực mạnh.</p>
+            <p>⚒ <b>GHÉP</b> (<kbd>G</kbd>): 2 khẩu giống nhau cùng ★ → <b>★+1</b> · 2 khẩu ★3 có tiến hóa → vũ khí <span class="r-mythic">Thần Thoại</span> · vài công thức đặc biệt (xem ở Kho Vũ Khí).</p>
+          </section>
+          <section>
+            <h3>⭐ Lên cấp &amp; Thẻ nâng cấp</h3>
+            <p>Nhặt ngọc EXP để lên cấp, chọn 1 trong 3 thẻ. <b>Mỗi thẻ có giới hạn cấp</b> và chỉ số cộng dồn tuyến tính có trần — không thể "hack game" bằng cách chọn 1 thẻ mãi. Mỗi trận được <b>đổi bộ thẻ 3 lần</b> (<kbd>R</kbd>).</p>
+            <p><b>Chí mạng</b>: x2 sát thương, số <b class="c-gold">to vàng/đỏ có dấu !</b> và khựng hình trong tích tắc. Số sát thương thường màu trắng.</p>
+          </section>
+          <section>
+            <h3>🔥 Combo điểm</h3>
+            <p>Hạ quái liên tiếp trong 2.6 giây để tăng combo: điểm nhân tới <b>x2</b>. Mốc thưởng: x25 hút ngọc · x50 +1 Giáp · x100 +1 Máu.</p>
+          </section>
+          <section>
+            <h3>🗺️ Bản đồ, vật thể &amp; Bẫy</h3>
+            <p><b>Thùng gỗ</b> / <b>lọ năng lượng</b> đập vỡ rơi Vàng, Năng Lượng, Tim · <b>Bụi cây</b> chắn đạn của cả 2 phe (bắn mãi cũng tan) · <b>Thùng thuốc nổ</b> nổ lan (cả bạn) · <b>Đền Thờ</b>: chạm để nhận bùa 20 giây.</p>
+            <p>Rừng: vũng axit · Dung nham: hố nham thạch, bẫy lửa · Băng: sàn trơn, tinh thể vỡ bắn mảnh băng · Nghĩa trang: <b>bàn tay ma</b> vồ lên.</p>
+          </section>
+          <section>
+            <h3>🎚️ Độ khó</h3>
+            <p><b>Dễ</b>: quái yếu, điểm x0.7 · <b>Thường</b>: chuẩn · <b>Ác Mộng</b>: quái trâu hơn 40%, đông hơn, từ đợt 4 đánh đau hơn, điểm x1.6.</p>
+          </section>
+          <section>
+            <h3>🎮 Điều khiển</h3>
+            <p class="controls-desktop-only">WASD: chạy · Chuột trái: tấn công (giữ để tích lực) · <kbd>Space</kbd> / chuột phải: kỹ năng · <kbd>Shift</kbd>: lướt · <kbd>E</kbd>: nhặt / mua / cầu phúc · <kbd>G</kbd>: ghép vũ khí · <kbd>Q</kbd>: đổi vũ khí · <kbd>P</kbd>/<kbd>Esc</kbd>: tạm dừng · <kbd>M</kbd>: tắt tiếng · <kbd>L</kbd>: tắt/bật ánh sáng · <kbd>H</kbd>: thông số.</p>
+            <p>Điện thoại (xoay ngang): ngón trái kéo để chạy · ngón phải kéo để ngắm &amp; bắn (giữ để tích lực) · nút bên phải: Kỹ năng / Lướt / Đổi súng / <b>E</b> nhặt / <b>GHÉP</b>.</p>
+          </section>
+        </div>
       </div>
     </section>
   </div>

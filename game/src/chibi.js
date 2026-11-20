@@ -135,6 +135,10 @@ function drawFrame(look, P, W, H, ax, ay) {
   // --- ĐẦU (to!) + mặt + tóc / mũ
   const head = new Layer(), face = new Layer(), top = new Layer(), back = new Layer();
   face.noOutline = true;
+  if (look.cape) {   // áo choàng / khăn quàng sau lưng, bay phấp phới theo frame
+    const capeC = T(look.cape), w = [0, 1, 2, 1][P.tail % 4];
+    back.poly([[-5 + bx, bodyY - 9], [2 + bx, bodyY - 9], [-1 + bx - lean, -1], [-8 + bx - lean - w, 0], [-10 + bx - lean - w, -3]], capeC);
+  }
   const hairC = T(look.hair ?? "#2a1c18");
   const hcx = hx + 0.5, rx = 9.5, ry = 8.5;
   const K = look.head;
@@ -156,11 +160,54 @@ function drawFrame(look, P, W, H, ax, ay) {
     const bone = T(look.skin ?? "#f4f0e0");
     head.oval(hcx, headCY, rx - 0.5, ry, bone);
     face.rect(hx + 1, headCY - 1, 3, 3, [26, 16, 28]); face.rect(hx + 6, headCY - 1, 3, 3, [26, 16, 28]);
-    face.set(hx + 2, headCY, rgb("#ff3030")); face.set(hx + 7, headCY, rgb("#ff3030"));
+    const glow = rgb(look.eyes ?? "#ff3030");
+    face.set(hx + 2, headCY, glow); face.set(hx + 7, headCY, glow);
+    if (look.eyes) { face.set(hx + 3, headCY, glow); face.set(hx + 8, headCY, glow); }
     face.rect(hx + 3, headCY + 4, 5, 1, bone.lo);
     // mũ trùm
     const hood = T(look.accent ?? "#3a3040");
     top.poly([[hx - 10, headCY + 6], [hx - 9, headCY - 6], [hx - 3, headCY - 10], [hx + 6, headCY - 9], [hx + 9, headCY - 4], [hx + 2, headCY - 5], [hx - 4, headCY - 2], [hx - 5, headCY + 6]], hood);
+  } else if (K === "paladin") {
+    // mũ thánh kỵ sĩ: mũ vàng kín, khe mắt chữ T, đôi cánh nhỏ hai bên + chùm lông trắng
+    const gold = T(look.helm ?? "#f0c040");
+    head.oval(hcx, headCY, rx, ry, gold);
+    face.poly([[hx + 1, headCY - 2], [hx + 9, headCY - 3], [hx + 9, headCY], [hx + 1, headCY + 1]], [24, 16, 20]);
+    face.rect(hx + 4, headCY, 2, 4, [24, 16, 20]);
+    face.rect(hx + 2, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff")); face.rect(hx + 6, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff"));
+    face.rect(hx - 8, headCY - 4, 1, 4, gold.hi);
+    const wing = T(look.accent2 ?? "#ffffff"), w = P.tail % 2;
+    back.poly([[hx - 7, headCY - 3], [hx - 14, headCY - 9 - w], [hx - 12, headCY - 4], [hx - 15, headCY - 4 + w], [hx - 8, headCY + 1]], wing);
+    const plume = T(look.accent ?? "#ff4a3a");
+    back.poly([[hx - 1, headCY - 8], [hx + 3, headCY - 9], [hx - 3, headCY - 14 - w], [hx - 8, headCY - 12 + w]], plume);
+  } else if (K === "ninja") {
+    // ninja: khăn trùm đen kín đầu, chỉ hở đôi mắt, băng đô đỏ có 2 đuôi bay
+    const cloth = T(look.hair ?? "#24222e");
+    head.oval(hcx, headCY, rx, ry, cloth);
+    face.poly([[hx, headCY - 3], [hx + 9, headCY - 4], [hx + 9, headCY + 1], [hx, headCY + 1]], skin.mid);
+    face.rect(hx + 2, headCY - 2, 2, 2, [20, 14, 24]); face.rect(hx + 6, headCY - 2, 2, 2, [20, 14, 24]);
+    face.set(hx + 3, headCY - 2, [255, 255, 255]); face.set(hx + 7, headCY - 2, [255, 255, 255]);
+    face.rect(hx, headCY + 1, 10, 1, cloth.lo);
+    const band = T(look.accent ?? "#e8343f"), w = [0, 1, 0, -1][P.tail % 4];
+    const bandL = new Layer();
+    bandL.poly([[hx - 9, headCY - 6], [hx + 9, headCY - 7], [hx + 9, headCY - 5], [hx - 9, headCY - 4]], band);
+    bandL.poly([[hx - 9, headCY - 6], [hx - 17, headCY - 5 + w], [hx - 17, headCY - 3 + w], [hx - 9, headCY - 4]], band);
+    bandL.poly([[hx - 9, headCY - 5], [hx - 14, headCY + w], [hx - 13, headCY + 1 + w], [hx - 9, headCY - 3]], band);
+    top.extra = bandL;
+  } else if (K === "hood") {
+    // thợ săn: mũ trùm xanh rêu nhọn ra sau, mặt người, lông chim trên mũ
+    head.oval(hcx, headCY, rx, ry, skin);
+    const eye = rgb(look.eyes ?? "#1a1420");
+    face.rect(hx + 2, headCY, 2, 2, eye); face.rect(hx + 6, headCY, 2, 2, eye);
+    face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    face.rect(hx + 1, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));
+    face.rect(hx + 7, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));
+    const hoodC = T(look.accent ?? "#3a6a34"), w = P.tail % 2;
+    top.poly([[hx - 11, headCY + 6], [hx - 11, headCY - 4], [hx - 6, headCY - 9], [hx + 3, headCY - 10], [hx + 9, headCY - 7], [hx + 11, headCY - 2],
+      [hx + 9, headCY - 2], [hx + 4, headCY - 4], [hx - 2, headCY - 3], [hx - 5, headCY + 2], [hx - 7, headCY + 6]], hoodC);
+    back.poly([[hx - 8, headCY - 6], [hx - 15, headCY - 2 + w], [hx - 9, headCY + 2]], hoodC);
+    const feather = new Layer();
+    feather.poly([[hx + 2, headCY - 9], [hx + 6, headCY - 15 - w], [hx + 4, headCY - 9]], T(look.accent2 ?? "#e8343f"));
+    top.extra = feather;
   } else {
     // đầu người: da mặt + tóc
     head.oval(hcx, headCY, rx, ry, skin);
