@@ -131,11 +131,12 @@ kbd {
 .lobby-modal {
   position: absolute; inset: 0;
   display: grid; place-items: center;
+  grid-template: 100% / 100%;   /* hàng lưới = đúng chiều cao màn -> max-height của thẻ có hiệu lực, danh sách dài thì cuộn */
   background: rgba(8, 6, 14, 0.55);
   animation: fadein 0.2s ease-out;
 }
 .lp-card {
-  width: 46em; max-height: calc(100% - 2em);
+  width: 46em; max-height: calc(100% - 2em); min-height: 0; overflow: hidden;
   display: flex; flex-direction: column; gap: 0.5em;
   padding: 0.7em 0.9em 0.8em;
   background: linear-gradient(180deg, rgba(36, 30, 51, 0.98), rgba(22, 18, 32, 0.98));
@@ -147,7 +148,7 @@ kbd {
 .lp-head { display: flex; align-items: center; gap: 0.6em; }
 .lp-head h2 { font-size: 1.1em; color: var(--gold); letter-spacing: 0.08em; text-shadow: 0 0.1em 0 #000; }
 .lp-head .btn-icon { width: 1.9em; height: 1.9em; font-size: 0.8em; }
-.lp-body { display: flex; flex-direction: column; gap: 0.5em; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.lp-body { display: flex; flex-direction: column; gap: 0.5em; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding-bottom: 0.35em; /* chừa chỗ viền nút đang chọn */ }
 .lp-sub { font-size: 0.64em; color: #cfc8e4; }
 .lp-h3 { font-size: 0.7em; color: var(--gold); margin-top: 0.2em; }
 .lp-h3 small { color: var(--muted); font-weight: 400; }
@@ -705,3 +706,134 @@ body.is-touch button { touch-action: manipulation; }
   body.is-touch .rotate-hint { display: flex; }
   body.is-touch #stage { visibility: hidden; }
 }
+
+/* =====================================================================================
+   BẢN 5.0 — CHẾ ĐỘ NHẢY DÙ RÚT QUÂN
+   Bảng màu "đồ quân dụng": vải ô-liu, chữ in khuôn kaki, cam tín hiệu (rủi ro), xanh bộ đàm (rút quân)
+   ===================================================================================== */
+:root {
+  --olive: #3d4a26;
+  --olive-dark: #232b15;
+  --khaki: #c8b47a;
+  --signal: #ff8a2a;
+  --radio: #5fdc8c;
+}
+
+/* ---------- Tab chọn chế độ ---------- */
+.lobby-modal[data-kind="portal"].is-extract .lp-card { width: 46em; }
+.mode-tabs { display: grid; grid-template-columns: 1.25fr 1fr; gap: 0.4em; }
+.mode-tab {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.1em;
+  padding: 0.45em 0.7em; text-align: left;
+  background: #120f1c; border: 0.12em solid var(--line-dark); color: var(--muted);
+}
+.mode-tab b { font-size: 0.78em; letter-spacing: 0.04em; }
+.mode-tab small { font-size: 0.52em; }
+.mode-tab:hover { border-color: var(--line); color: var(--text); }
+.mode-tab[aria-selected="true"] { color: var(--text); border-color: var(--gold); background: linear-gradient(180deg, #2a2338, #1a1526); box-shadow: inset 0 -0.18em 0 var(--gold); }
+#mode-extract[aria-selected="true"] { border-color: var(--radio); box-shadow: inset 0 -0.18em 0 var(--radio); background: linear-gradient(180deg, #1e2a1c, #141a12); }
+#mode-extract[aria-selected="true"] b { color: var(--radio); }
+
+/* ---------- Bộ đồ: Kho (trái) · Túi (phải) ---------- */
+.kit { display: grid; grid-template-columns: 1fr 1.05fr; gap: 0.6em; }
+.kit section { display: flex; flex-direction: column; gap: 0.35em; padding: 0.5em 0.55em; background: #120f1c; border: 0.12em solid var(--line-dark); }
+.kit-h { font-size: 0.64em; color: var(--khaki); letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5em; }
+.kit-h small { font-weight: 400; color: var(--muted); font-size: 0.85em; }
+.kit-label { font-size: 0.56em; color: var(--muted); }
+.stash-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3em; }
+.stash-item {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.1em;
+  padding: 0.3em 0.1em 0.2em; background: #1a1526; border: 0.1em solid var(--line-dark);
+}
+.stash-item canvas { width: 2em; height: 2em; image-rendering: pixelated; }
+.stash-item b { font-family: Consolas, monospace; font-size: 0.6em; color: var(--text); }
+.stash-item span { font-size: 0.42em; color: var(--muted); text-align: center; line-height: 1.1; }
+.stash-item:hover:not(:disabled) { border-color: var(--khaki); background: #221c30; }
+.stash-item:disabled { opacity: 0.35; cursor: default; }
+.stash-item .free { position: absolute; top: 0.15em; right: 0.3em; font-family: Consolas, monospace; font-size: 0.5em; color: var(--radio); }
+.stash-weapons { display: flex; flex-wrap: wrap; gap: 0.3em; max-height: 6.6em; overflow-y: auto; scrollbar-width: thin; }
+.stash-weapon {
+  --r-color: #c4cede;
+  display: flex; align-items: center; gap: 0.3em; padding: 0.15em 0.35em 0.15em 0.2em;
+  background: #1a1526; border: 0.1em solid var(--line-dark); border-left: 0.25em solid var(--r-color);
+  font-size: 0.5em; color: var(--text);
+}
+.stash-weapon canvas { width: 3.6em; height: 2.2em; image-rendering: pixelated; }
+.stash-weapon.on { border-color: var(--radio); box-shadow: 0 0 0.6em rgba(95, 220, 140, 0.35); }
+.stash-weapon:hover { filter: brightness(1.15); }
+.stash-empty { font-size: 0.55em; color: var(--muted); font-style: italic; }
+
+/* Túi Chiến Thuật: 4 ngăn vải ô-liu, viền chỉ khâu nét đứt, phím in khuôn — điểm nhấn của bảng */
+.bag-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.35em; padding: 0.4em; background: var(--olive-dark); border: 0.12em solid #0f120a; box-shadow: inset 0 0.2em 0 rgba(0, 0, 0, 0.35); }
+.bag-slot {
+  position: relative; aspect-ratio: 1 / 1;
+  display: grid; place-items: center;
+  background: repeating-linear-gradient(45deg, var(--olive) 0 0.2em, #36421f 0.2em 0.4em);
+  border: 0.12em dashed var(--khaki);
+  outline: 0.12em solid #0f120a;
+}
+.bag-slot canvas { width: 2.4em; height: 2.4em; image-rendering: pixelated; }
+.bag-slot .key { position: absolute; top: 0.15em; left: 0.25em; font-family: Consolas, monospace; font-size: 0.62em; font-weight: 900; color: var(--khaki); text-shadow: 0 0.08em 0 #000; }
+.bag-slot .cnt { position: absolute; right: 0.25em; bottom: 0.1em; font-family: Consolas, monospace; font-size: 0.66em; font-weight: 700; color: #fff; text-shadow: 0 0.08em 0 #000; }
+.bag-slot.empty { background: #1e2412; border-style: dotted; border-color: #5a6a3a; }
+.bag-slot.empty .key { color: #5a6a3a; }
+.bag-slot:not(.empty):hover { filter: brightness(1.2); }
+.bag-weapon { font-size: 0.56em; color: var(--muted); min-height: 1.2em; }
+.bag-weapon b { color: var(--text); }
+.dur-row { display: flex; align-items: center; gap: 0.6em; }
+.dur-btns { display: flex; gap: 0.3em; }
+.dur-btns button {
+  font-family: Consolas, monospace; font-size: 0.66em; font-weight: 700; padding: 0.25em 0.55em;
+  background: #1a1526; color: var(--muted); border: 0.1em solid var(--line-dark);
+}
+.dur-btns button.on { color: #0f120a; background: var(--khaki); border-color: var(--khaki); }
+.risk-note { font-size: 0.52em; color: var(--signal); line-height: 1.3; border-top: 0.1em dashed var(--line-dark); padding-top: 0.35em; }
+.lobby-modal.is-extract .map-picker { display: none; }
+.lobby-modal.is-extract .portal-row { flex-direction: row; justify-content: center; }
+.lobby-modal.is-extract #start-btn { background: linear-gradient(180deg, #8ae8a8, var(--radio)); border-color: #2a7a44; color: #0b2a14; }
+
+/* ---------- Tổng kết rút quân ---------- */
+#xresult {
+  display: grid; place-items: center;
+  background: radial-gradient(ellipse at center, rgba(14, 40, 22, 0.72), rgba(6, 10, 8, 0.9));
+  animation: fadein 0.35s ease-out;
+}
+#xresult.fail { background: radial-gradient(ellipse at center, rgba(40, 6, 14, 0.72), rgba(8, 6, 12, 0.9)); }
+.xr-card {
+  text-align: center; min-width: 26em; max-width: 34em;
+  padding: 1em 1.8em 1.2em;
+  background: linear-gradient(180deg, rgba(30, 36, 28, 0.97), rgba(16, 20, 16, 0.97));
+  border: 0.15em solid #2a7a44;
+  box-shadow: inset 0 0 0 0.12em #0b120c, 0 0.3em 0 #050805;
+  animation: pop 0.3s cubic-bezier(.2, .9, .3, 1.3);
+}
+#xresult.fail .xr-card { background: linear-gradient(180deg, rgba(36, 30, 51, 0.97), rgba(22, 18, 32, 0.97)); border-color: #7a2a3a; }
+.xr-kicker { font-size: 0.6em; letter-spacing: 0.08em; color: var(--khaki); }
+.xr-title { font-size: 2em; letter-spacing: 0.1em; color: var(--radio); text-shadow: 0 0.08em 0 #0b2a14, 0 0 0.6em rgba(95, 220, 140, 0.45); }
+#xresult.fail .xr-title { color: #ff4a5a; text-shadow: 0 0.08em 0 #4a0a14, 0 0 0.6em rgba(255, 60, 80, 0.5); }
+.xr-sub { font-size: 0.68em; color: #cfc8e4; margin-top: 0.15em; }
+.xr-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4em; margin: 0.8em 0 0.7em; }
+.xr-stats div { background: rgba(0, 0, 0, 0.3); border: 0.1em solid rgba(255, 255, 255, 0.08); padding: 0.3em 0.2em; }
+.xr-stats dt { font-size: 0.5em; color: var(--muted); }
+.xr-stats dd { font-family: Consolas, monospace; font-size: 0.95em; font-weight: 700; color: var(--gold); }
+.xr-h { font-size: 0.66em; color: var(--khaki); text-align: left; margin-bottom: 0.3em; }
+#xresult.fail .xr-h { color: #ff7a7a; }
+.xr-haul { display: flex; flex-wrap: wrap; gap: 0.3em; min-height: 2.6em; margin-bottom: 0.9em; padding: 0.35em; background: rgba(0, 0, 0, 0.3); border: 0.1em dashed rgba(200, 180, 122, 0.35); }
+.xr-haul .hi { display: flex; align-items: center; gap: 0.2em; padding: 0.15em 0.35em; background: rgba(255, 255, 255, 0.05); font-family: Consolas, monospace; font-size: 0.6em; color: #fff; }
+.xr-haul canvas { width: 2em; height: 2em; image-rendering: pixelated; }
+.xr-haul canvas.wide { width: 3.6em; }
+#xresult.fail .xr-haul .hi { opacity: 0.55; text-decoration: line-through; }
+.xr-haul .none { font-size: 0.6em; color: var(--muted); font-style: italic; align-self: center; }
+
+/* ---------- Nút cảm ứng: Túi Chiến Thuật + Nạp đạn (chỉ hiện ở chế độ Rút Quân) ---------- */
+.t-bagrow { position: absolute; left: 50%; bottom: 0.6em; transform: translateX(-50%); display: flex; gap: 0.4em; z-index: 6; }
+.t-bagrow.hidden { display: none; }
+.t-bag, .t-reload {
+  width: 3.2em; height: 3.2em; display: grid; place-items: center; position: relative;
+  background: rgba(35, 43, 21, 0.85); border: 0.12em dashed var(--khaki); color: var(--khaki);
+  font-family: Consolas, monospace; font-size: 0.8em; font-weight: 900;
+}
+.t-bag canvas { width: 2em; height: 2em; image-rendering: pixelated; }
+.t-bag .cnt { position: absolute; right: 0.2em; bottom: 0.05em; font-size: 0.7em; color: #fff; }
+.t-bag.empty { opacity: 0.35; }
+.t-reload { border-style: solid; border-color: var(--signal); color: var(--signal); }

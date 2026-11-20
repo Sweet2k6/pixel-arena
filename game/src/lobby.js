@@ -23,7 +23,7 @@ const TALK_R = 24;         // khoảng cách để đổi nhân vật
 /** Trạm tương tác: (x, y) = điểm đứng để dùng, hit = vùng click */
 export const STATIONS = [
   { id: "armory",  name: "Kho Vũ Khí",       hint: "Chế tạo & chọn vũ khí phụ",    x: 64,  y: 98, r: 28, hit: { x: 22, y: 30, w: 86, h: 62 }, light: "#ff8a2a" },
-  { id: "portal",  name: "Cổng Dịch Chuyển", hint: "Chọn bản đồ, độ khó & vào trận", x: 240, y: 92, r: 30, hit: { x: 206, y: 12, w: 68, h: 74 }, light: "#c48cff" },
+  { id: "portal",  name: "Cổng Xuất Kích",   hint: "Chọn chế độ, trang bị & xuất kích", x: 240, y: 92, r: 30, hit: { x: 206, y: 12, w: 68, h: 74 }, light: "#c48cff" },
   { id: "upgrade", name: "Bàn Nâng Cấp",     hint: "Dùng Ngọc nâng cấp nhân vật",  x: 416, y: 98, r: 28, hit: { x: 372, y: 30, w: 86, h: 62 }, light: "#7cd8ff" },
 ];
 /** Vật cản (hình chữ nhật, tọa độ chân) */

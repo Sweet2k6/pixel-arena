@@ -17,6 +17,7 @@
 import { angleDiff, circleHit, pointSegDist2, withAlpha, rand, TAU } from "./util.js";
 import { Pool } from "./pool.js";
 import { RARITY, rarityColor } from "./rarity.js";
+import { drawGunSprite, drawGunIcon, drawGunProjectile, gunMuzzleLength, gunSpan, gunCenterY, gunFlash, gunShell, gunImpact } from "./guns.js";
 
 /** Màu nhãn độ hiếm vũ khí (giữ tên cũ cho các file khác) */
 export const WEAPON_RARITY = Object.fromEntries(Object.entries(RARITY).map(([k, v]) => [k, v.color]));
@@ -169,6 +170,300 @@ export const WEAPONS = {
     damage: 3.6, fireRate: 0.3, bulletSpeed: 520, bulletRadius: 3, pierce: 2, knockback: 130,
     color: "#a8e0ff", sound: "bow",
   },
+  // =====================================================================================
+  //  KHO SÚNG PIXEL ARMORY (type "firearm") — dùng BĂNG ĐẠN thay vì Năng Lượng (cost 0)
+  //  mag = đạn / băng · reload = giây nạp · noise = bán kính tiếng ồn (px) thu hút zombie
+  //  sprite = tên ảnh trong src/guns.js (GUN_DATA / GUN_VARIANTS) · proj = ảnh đạn (bullet|pellet|rocket|grenade|laser|plasma)
+  //  fireRate = 60 / phát-mỗi-phút · bulletSpeed px/giây · range px · aoe = bán kính nổ · pierce = xuyên thêm · beam = tia tức thì
+  //  >>> CHỈNH CHỈ SỐ SÚNG Ở ĐÂY. Quy đổi: sát thương ≈ sát thương manifest / 14.
+  // =====================================================================================
+  // ---------------- SÚNG: THƯỜNG ----------------
+  gPistol: {
+    id: "gPistol", name: "Súng Lục Pistol 17", desc: "Nhẹ, gọn, băng 12 viên. Khẩu mở đầu đáng tin cậy.",
+    type: "firearm", sprite: "pistol", proj: "bullet", rarity: "common", cost: 0, shells: true,
+    damage: 1.6, fireRate: 60 / 380, mag: 12, reload: 0.85, auto: false, noise: 260,
+    bulletSpeed: 520, range: 300, spread: 0.02, bulletRadius: 2, knockback: 110, kick: 4, shake: [0.05, 1], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gUzi: {
+    id: "gUzi", name: "Tiểu Liên UZI", desc: "Xả đạn liên thanh cực nhanh, tầm gần. Băng 24 viên.",
+    type: "firearm", sprite: "machinepistol", proj: "bullet", rarity: "common", cost: 0, shells: true,
+    damage: 0.75, fireRate: 60 / 720, mag: 24, reload: 1.15, auto: true, noise: 300,
+    bulletSpeed: 480, range: 240, spread: 0.075, bulletRadius: 2, knockback: 60, kick: 2, shake: [0.04, 0.8], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gBaton: {
+    id: "gBaton", name: "Dùi Cui", desc: "Gậy cao su cứng: đánh đẩy lùi mạnh và làm quái choáng 1 giây",
+    type: "blade", sprite: "a_baton", look: "baton", rarity: "common", cost: 0, noise: 0,
+    damage: 1.6, fireRate: 0.3, range: 38, arc: 1.2, knockback: 430, stun: 1.0, color: "#c8cde0", sound: "punch",
+  },
+  gKnife: {
+    id: "gKnife", name: "Dao Găm Combat Knife", desc: "Đâm cực nhanh, im lặng. Sát thương nhỏ nhưng liên hoàn",
+    type: "blade", sprite: "a_knife", look: "knife", rarity: "common", cost: 0, noise: 0,
+    damage: 1.3, fireRate: 0.14, range: 30, arc: 1.0, knockback: 70, color: "#e8ecff", sound: "sword",
+  },
+  gColt: {
+    id: "gColt", name: "Colt M1911", desc: "Súng lục .45 huyền thoại: 7 viên, mỗi phát đau hơn Pistol 17.",
+    type: "firearm", sprite: "a_colt", proj: "bullet", rarity: "common", cost: 0, shells: true,
+    damage: 2.2, fireRate: 60 / 300, mag: 7, reload: 1.0, auto: false, noise: 280,
+    bulletSpeed: 540, range: 310, spread: 0.015, bulletRadius: 2, knockback: 150, kick: 5, shake: [0.07, 1.4], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gBeretta: {
+    id: "gBeretta", name: "Beretta M9", desc: "Súng lục 15 viên, nhịp bắn nhanh, mỗi phát nhẹ nhưng liên tục.",
+    type: "firearm", sprite: "a_beretta", proj: "bullet", rarity: "common", cost: 0, shells: true,
+    damage: 1.2, fireRate: 60 / 520, mag: 15, reload: 1.0, auto: false, noise: 270,
+    bulletSpeed: 520, range: 290, spread: 0.03, bulletRadius: 2, knockback: 90, kick: 3, shake: [0.05, 1], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  // ---------------- SÚNG: HIẾM ----------------
+  gMp5: {
+    id: "gMp5", name: "Tiểu Liên MP5", desc: "Băng thẳng 32 viên, tốc độ bắn cao, giật nhẹ, bắn chính xác hơn UZI.",
+    type: "firearm", sprite: "smg", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 0.75, fireRate: 60 / 860, mag: 32, reload: 1.25, auto: true, noise: 300,
+    bulletSpeed: 500, range: 280, spread: 0.055, bulletRadius: 2, knockback: 60, kick: 2, shake: [0.04, 0.8], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gRevolver: {
+    id: "gRevolver", name: "Ổ Quay Magnum", desc: "Nòng dài, 6 viên. Chậm nhưng từng phát rất đau.",
+    type: "firearm", sprite: "revolver", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 3.4, fireRate: 60 / 140, mag: 6, reload: 1.35, auto: false, noise: 280, pierce: 1,
+    bulletSpeed: 560, range: 340, spread: 0.01, bulletRadius: 2, knockback: 200, kick: 6, shake: [0.08, 2], color: "#ffd34a", sound: "pistol", muzzleFx: "small",
+  },
+  gPump: {
+    id: "gPump", name: "Hoa Cải Bơm", desc: "Mỗi phát 6 viên chì tỏa chùm, hất lùi mạnh. Băng 6 viên.",
+    type: "firearm", sprite: "shotgun", proj: "pellet", rarity: "rare", cost: 0, shells: true, shellBig: true,
+    damage: 1.5, fireRate: 60 / 80, mag: 6, reload: 1.5, auto: false, noise: 380, pellets: 6,
+    bulletSpeed: 440, range: 170, spread: 0.2, bulletRadius: 2, knockback: 300, kick: 8, shake: [0.14, 3], color: "#ffb347", sound: "shotgun", muzzleFx: "heavy",
+  },
+  gSawedoff: {
+    id: "gSawedoff", name: "Hai Nòng Cụt Sawed-off", desc: "Hai nòng cưa ngắn, 8 viên chì. Sát mặt là hết chuyện.",
+    type: "firearm", sprite: "sawedoff", proj: "pellet", rarity: "rare", cost: 0, shells: true, shellBig: true,
+    damage: 1.2, fireRate: 60 / 110, mag: 2, reload: 1.4, auto: false, noise: 380, pellets: 8,
+    bulletSpeed: 420, range: 130, spread: 0.34, bulletRadius: 2, knockback: 340, kick: 10, shake: [0.16, 3.5], color: "#ffb347", sound: "shotgun", muzzleFx: "heavy",
+  },
+  gCrowbar: {
+    id: "gCrowbar", name: "Xà Beng Crowbar", desc: "Thanh thép dài: đập choáng quái 0.8 giây, tầm xa hơn dao",
+    type: "blade", sprite: "a_crowbar", look: "crowbar", rarity: "rare", cost: 0, noise: 0,
+    damage: 2.2, fireRate: 0.38, range: 40, arc: 1.1, knockback: 260, stun: 0.8, color: "#d84a3a", sound: "punch",
+  },
+  gMachete: {
+    id: "gMachete", name: "Dao Rựa Machete", desc: "Lưỡi dài chém vòng cung rộng, quét được cả đám quái",
+    type: "blade", sprite: "a_machete", look: "machete", rarity: "rare", cost: 0, noise: 0,
+    damage: 2.6, fireRate: 0.3, range: 46, arc: 1.55, knockback: 200, color: "#d8e0f0", sound: "sword",
+  },
+  gPlasma: {
+    id: "gPlasma", name: "Súng Plasma", desc: "Cuộn từ tím, đạn chậm nổ nhỏ gây sát thương lan 30px.",
+    type: "firearm", sprite: "plasma", proj: "plasma", rarity: "rare", cost: 0,
+    damage: 2.6, fireRate: 60 / 220, mag: 8, reload: 1.3, auto: false, noise: 220, aoe: 30, explodeSource: "cannon",
+    bulletSpeed: 380, range: 280, spread: 0.03, bulletRadius: 3, knockback: 180, kick: 5, shake: [0.06, 1.5], color: "#c88aff", sound: "energyGun", muzzleFx: "energy",
+  },
+  gCombatSg: {
+    id: "gCombatSg", name: "Hoa Cải Combat", desc: "Hoa cải bán tự động 8 viên, 6 chì mỗi phát, nhịp bắn nhanh hơn Hoa Cải Bơm.",
+    type: "firearm", sprite: "a_combatsg", proj: "pellet", rarity: "rare", cost: 0, shells: true, shellBig: true, pellets: 6,
+    damage: 1.3, fireRate: 60 / 150, mag: 8, reload: 2.0, auto: false, noise: 380,
+    bulletSpeed: 440, range: 180, spread: 0.19, bulletRadius: 2, knockback: 260, kick: 7, shake: [0.12, 2.6], color: "#ffb347", sound: "shotgun", muzzleFx: "heavy",
+  },
+  gDoubleBarrel: {
+    id: "gDoubleBarrel", name: "Hai Nòng Dài Double Barrel", desc: "Hai nòng dài chỉ 2 viên nhưng 10 chì mỗi phát, tầm xa hơn Sawed-off.",
+    type: "firearm", sprite: "a_doublebarrel", proj: "pellet", rarity: "rare", cost: 0, shells: true, shellBig: true, pellets: 10,
+    damage: 1.3, fireRate: 60 / 100, mag: 2, reload: 1.5, auto: false, noise: 400,
+    bulletSpeed: 420, range: 170, spread: 0.28, bulletRadius: 2, knockback: 380, kick: 10, shake: [0.17, 3.6], color: "#ffb347", sound: "shotgun", muzzleFx: "heavy",
+  },
+  gG36c: {
+    id: "gG36c", name: "Carbine G36C", desc: "Carbine chính xác, băng 30 viên, giật cực nhẹ.",
+    type: "firearm", sprite: "a_g36c", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 1.1, fireRate: 60 / 560, mag: 30, reload: 1.3, auto: true, noise: 360,
+    bulletSpeed: 520, range: 350, spread: 0.02, bulletRadius: 2, knockback: 80, kick: 2, shake: [0.04, 0.9], color: "#ffe26b", sound: "rifle", muzzleFx: "rifle",
+  },
+  gP90: {
+    id: "gP90", name: "Tiểu Liên P90", desc: "Băng 50 viên, tốc độ bắn cao, rất êm tay.",
+    type: "firearm", sprite: "a_p90", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 0.7, fireRate: 60 / 900, mag: 50, reload: 1.7, auto: true, noise: 280,
+    bulletSpeed: 500, range: 270, spread: 0.06, bulletRadius: 2, knockback: 50, kick: 1, shake: [0.03, 0.6], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gTommy: {
+    id: "gTommy", name: "Tommy Gun", desc: "Hộp đạn trống 50 viên, đạn tản rộng, rền vang như phim xã hội đen.",
+    type: "firearm", sprite: "a_tommy", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 0.9, fireRate: 60 / 640, mag: 50, reload: 2.0, auto: true, noise: 340,
+    bulletSpeed: 470, range: 250, spread: 0.1, bulletRadius: 2, knockback: 70, kick: 2, shake: [0.05, 1], color: "#ffd34a", sound: "pistol", muzzleFx: "small",
+  },
+  gRpk: {
+    id: "gRpk", name: "Súng Máy RPK", desc: "Súng máy hạng nhẹ băng 45 viên, mỗi viên đau hơn tiểu liên.",
+    type: "firearm", sprite: "a_rpk", proj: "bullet", rarity: "rare", cost: 0, shells: true,
+    damage: 1.5, fireRate: 60 / 500, mag: 45, reload: 2.0, auto: true, noise: 400,
+    bulletSpeed: 540, range: 340, spread: 0.05, bulletRadius: 2, knockback: 100, kick: 3, shake: [0.05, 1.2], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gShockRifle: {
+    id: "gShockRifle", name: "Súng Xung Kích", desc: "Bắn xung năng lượng laser đều đặn, êm hơn súng đạn.",
+    type: "firearm", sprite: "a_scifi1", proj: "laser", rarity: "rare", cost: 0,
+    damage: 1.0, fireRate: 60 / 480, mag: 24, reload: 1.2, auto: true, noise: 170,
+    bulletSpeed: 600, range: 320, spread: 0.02, bulletRadius: 3, knockback: 40, kick: 1, shake: [0, 0], color: "#7affd8", sound: "energyGun", muzzleFx: "energy",
+  },
+  // ---------------- SỬ THI ----------------
+  gM4: {
+    id: "gM4", name: "Trường M4A1", desc: "Carbine liên thanh gọn nhẹ, đều tay, băng 30 viên.",
+    type: "firearm", sprite: "carbine", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 1.3, fireRate: 60 / 620, mag: 30, reload: 1.35, auto: true, noise: 380,
+    bulletSpeed: 540, range: 360, spread: 0.028, bulletRadius: 2, knockback: 90, kick: 3, shake: [0.05, 1.2], color: "#ffe26b", sound: "rifle", muzzleFx: "rifle",
+  },
+  gAk47: {
+    id: "gAk47", name: "Trường AK-47", desc: "Báng gỗ, băng cong. Mỗi viên đau, giật mạnh, tiếng nổ vang xa.",
+    type: "firearm", sprite: "rifle", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 1.8, fireRate: 0.12, mag: 30, reload: 1.45, auto: true, noise: 400,
+    bulletSpeed: 550, range: 380, spread: 0.04, bulletRadius: 2, knockback: 120, kick: 4, shake: [0.06, 1.6], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gDeagle: {
+    id: "gDeagle", name: "Desert Eagle", desc: "Súng lục bạc cỡ nòng khủng, báng cam: 7 viên, mỗi phát xuyên 1 quái.",
+    type: "firearm", sprite: "deagle", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 4.2, fireRate: 60 / 150, mag: 7, reload: 1.5, auto: false, noise: 320, pierce: 1,
+    bulletSpeed: 580, range: 360, spread: 0.012, bulletRadius: 2, knockback: 240, kick: 7, shake: [0.09, 2.2], color: "#ffd34a", sound: "pistol", muzzleFx: "small",
+  },
+  gAutoShotgun: {
+    id: "gAutoShotgun", name: "Hoa Cải Tự Động", desc: "Hoa cải xả liên tục, 5 viên mỗi phát, băng 10 viên.",
+    type: "firearm", sprite: "autoshotgun", proj: "pellet", rarity: "epic", cost: 0, shells: true, shellBig: true,
+    damage: 1.2, fireRate: 0.2, mag: 10, reload: 2.0, auto: true, noise: 380, pellets: 5,
+    bulletSpeed: 440, range: 160, spread: 0.2, bulletRadius: 2, knockback: 220, kick: 6, shake: [0.1, 2.5], color: "#ffb347", sound: "shotgun", muzzleFx: "heavy",
+  },
+  gAwp: {
+    id: "gAwp", name: "Bắn Tỉa AWP", desc: "Một viên một bia: tia tức thì xuyên 3 quái, +25% chí mạng. Băng 5 viên.",
+    type: "firearm", sprite: "sniper", proj: "bullet", rarity: "epic", cost: 0, shells: true, shellBig: true, beam: true,
+    damage: 7, fireRate: 60 / 50, mag: 5, reload: 1.8, auto: false, noise: 560, pierce: 2, range: 600, critBonus: 0.25,
+    spread: 0.002, knockback: 220, kick: 9, shake: [0.14, 3.5], color: "#fff3a6", sound: "sniper", muzzleFx: "rifle",
+  },
+  gLaserRifle: {
+    id: "gLaserRifle", name: "Súng Laser Rifle", desc: "Tia năng lượng cyan rất thẳng, bắn nhanh, xuyên 1 quái. Êm hơn súng đạn.",
+    type: "firearm", sprite: "laser", proj: "laser", rarity: "epic", cost: 0,
+    damage: 0.9, fireRate: 60 / 900, mag: 40, reload: 1.2, auto: true, noise: 160, pierce: 1,
+    bulletSpeed: 640, range: 360, spread: 0.01, bulletRadius: 3, knockback: 40, kick: 1, shake: [0, 0], color: "#5af0ff", sound: "energyGun", muzzleFx: "energy",
+  },
+  gHatchet: {
+    id: "gHatchet", name: "Rìu Hatchet", desc: "Bổ một nhát sát thương lớn, hất văng mạnh",
+    type: "blade", sprite: "a_hatchet", look: "hatchet", rarity: "epic", cost: 0, noise: 0,
+    damage: 4.2, fireRate: 0.5, range: 40, arc: 1.2, knockback: 320, color: "#c8cde0", sound: "punch",
+  },
+  gFamas: {
+    id: "gFamas", name: "FAMAS", desc: "Bullpup bắn cực nhanh 1000 phát/phút, băng 25 viên.",
+    type: "firearm", sprite: "a_famas", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 1.0, fireRate: 60 / 1000, mag: 25, reload: 1.4, auto: true, noise: 380,
+    bulletSpeed: 540, range: 320, spread: 0.035, bulletRadius: 2, knockback: 70, kick: 3, shake: [0.04, 1], color: "#ffe26b", sound: "rifle", muzzleFx: "rifle",
+  },
+  gVector: {
+    id: "gVector", name: "KRISS Vector", desc: "Tiểu liên bắn nhanh nhất kho súng, băng 25 viên.",
+    type: "firearm", sprite: "a_vector", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 0.8, fireRate: 60 / 1100, mag: 25, reload: 1.3, auto: true, noise: 300,
+    bulletSpeed: 500, range: 240, spread: 0.07, bulletRadius: 2, knockback: 50, kick: 1, shake: [0.03, 0.6], color: "#ffe26b", sound: "pistol", muzzleFx: "small",
+  },
+  gScar: {
+    id: "gScar", name: "SCAR-H", desc: "Súng trường 7.62mm băng 20 viên, mỗi phát đau và giật mạnh.",
+    type: "firearm", sprite: "a_scar", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 2.6, fireRate: 60 / 420, mag: 20, reload: 1.6, auto: true, noise: 430,
+    bulletSpeed: 570, range: 400, spread: 0.035, bulletRadius: 2, knockback: 150, kick: 5, shake: [0.07, 1.8], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gDragunov: {
+    id: "gDragunov", name: "Bắn Tỉa Dragunov SVD", desc: "Bắn tỉa bán tự động băng 10 viên, tia tức thì xuyên 1 quái.",
+    type: "firearm", sprite: "a_dragunov", proj: "bullet", rarity: "epic", cost: 0, shells: true, shellBig: true, beam: true,
+    damage: 4.5, fireRate: 60 / 150, mag: 10, reload: 2.0, auto: false, noise: 520, pierce: 1, critBonus: 0.15,
+    range: 520, spread: 0.004, knockback: 180, kick: 6, shake: [0.1, 2.4], color: "#fff3a6", sound: "sniper", muzzleFx: "rifle",
+  },
+  gM24: {
+    id: "gM24", name: "Bắn Tỉa M24", desc: "Khóa nòng 5 viên, tia tức thì xuyên 2 quái, chí mạng +20%.",
+    type: "firearm", sprite: "a_m24", proj: "bullet", rarity: "epic", cost: 0, shells: true, shellBig: true, beam: true,
+    damage: 6.5, fireRate: 60 / 55, mag: 5, reload: 2.1, auto: false, noise: 540, pierce: 2, critBonus: 0.2,
+    range: 600, spread: 0.002, knockback: 210, kick: 8, shake: [0.13, 3.2], color: "#fff3a6", sound: "sniper", muzzleFx: "rifle",
+  },
+  gM249: {
+    id: "gM249", name: "Súng Máy M249 SAW", desc: "Băng 100 viên, xả liên tục không ngại nóng nòng.",
+    type: "firearm", sprite: "a_m249", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 0.9, fireRate: 60 / 780, mag: 100, reload: 2.8, auto: true, noise: 420,
+    bulletSpeed: 530, range: 320, spread: 0.07, bulletRadius: 2, knockback: 60, kick: 2, shake: [0.04, 0.9], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gStoner: {
+    id: "gStoner", name: "Súng Máy Stoner 63", desc: "Súng máy băng 75 viên, nhịp đều, tản vừa phải.",
+    type: "firearm", sprite: "a_stoner", proj: "bullet", rarity: "epic", cost: 0, shells: true,
+    damage: 1.0, fireRate: 60 / 700, mag: 75, reload: 2.4, auto: true, noise: 410,
+    bulletSpeed: 540, range: 340, spread: 0.06, bulletRadius: 2, knockback: 70, kick: 2, shake: [0.04, 1], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gEmp: {
+    id: "gEmp", name: "EMP Blaster", desc: "Tia điện xanh xuyên 3 quái, êm và nhanh nạp.",
+    type: "firearm", sprite: "a_emp", proj: "laser", rarity: "epic", cost: 0,
+    damage: 1.8, fireRate: 60 / 300, mag: 20, reload: 1.4, auto: true, noise: 180, pierce: 3,
+    bulletSpeed: 620, range: 380, spread: 0.015, bulletRadius: 3, knockback: 70, kick: 2, shake: [0.03, 0.6], color: "#4aa8ff", sound: "energyGun", muzzleFx: "energy",
+  },
+  gFutureRifle: {
+    id: "gFutureRifle", name: "Súng Trường Tương Lai", desc: "Súng trường năng lượng liên thanh, tia laser xuyên 1 quái.",
+    type: "firearm", sprite: "a_futurerifle", proj: "laser", rarity: "epic", cost: 0,
+    damage: 1.2, fireRate: 60 / 700, mag: 36, reload: 1.3, auto: true, noise: 170, pierce: 1,
+    bulletSpeed: 640, range: 360, spread: 0.015, bulletRadius: 3, knockback: 50, kick: 1, shake: [0, 0], color: "#7affd8", sound: "energyGun", muzzleFx: "energy",
+  },
+  // ---------------- SÚNG: HUYỀN THOẠI ----------------
+  gBarrett: {
+    id: "gBarrett", name: "Barrett .50cal", desc: "Cỡ nòng 12.7mm sơn xanh rêu: tia tức thì xuyên 5 quái, tiếng nổ vang cả vùng.",
+    type: "firearm", sprite: "barrett", proj: "bullet", rarity: "legend", cost: 0, shells: true, shellBig: true, beam: true,
+    damage: 9, fireRate: 60 / 70, mag: 10, reload: 2.4, auto: false, noise: 600, pierce: 4, range: 640, critBonus: 0.3,
+    spread: 0.002, knockback: 300, kick: 11, shake: [0.18, 4.5], color: "#ffe9a6", sound: "sniper", muzzleFx: "heavy",
+  },
+  gM79: {
+    id: "gM79", name: "Phóng Lựu M79", desc: "Lựu đạn bay vòng cung tới chỗ trỏ chuột rồi nổ bán kính 60px.",
+    type: "firearm", sprite: "grenade", proj: "grenade", rarity: "legend", cost: 0, lob: true,
+    damage: 5, fireRate: 60 / 70, mag: 4, reload: 1.7, auto: false, noise: 480, aoe: 60, explodeSource: "rocket",
+    bulletSpeed: 300, range: 240, spread: 0.02, bulletRadius: 3, knockback: 280, kick: 7, shake: [0.14, 3], color: "#8ad23a", sound: "heavy", muzzleFx: "heavy",
+  },
+  gBazooka: {
+    id: "gBazooka", name: "Bazooka", desc: "Đạn tên lửa tăng tốc, nổ lớn bán kính 70px. Chỉ 1 quả mỗi lần nạp.",
+    type: "firearm", sprite: "rocket", proj: "rocket", rarity: "legend", cost: 0, trail: "smoke",
+    damage: 7, fireRate: 60 / 45, mag: 1, reload: 2.1, auto: false, noise: 480, aoe: 70, explodeSource: "rocket",
+    bulletSpeed: 220, maxSpeed: 430, accel: 380, life: 1.7, spread: 0.02, bulletRadius: 4, knockback: 320, kick: 11, shake: [0.22, 4.5], color: "#ff7a3a", sound: "rocket", muzzleFx: "heavy",
+  },
+  gMinigun: {
+    id: "gMinigun", name: "Súng Máy Quay M134", desc: "Giữ cò để nòng quay nhanh dần rồi xả như mưa. Băng 120 viên.",
+    type: "firearm", sprite: "minigun", proj: "bullet", rarity: "legend", cost: 0, shells: true,
+    damage: 0.6, fireRate: 0.05, mag: 120, reload: 2.6, auto: true, spinUp: 0.5, noise: 420,
+    bulletSpeed: 520, range: 300, spread: 0.1, bulletRadius: 2, knockback: 50, kick: 2, shake: [0.04, 0.9], color: "#ffd34a", sound: "rifle", muzzleFx: "rifle",
+  },
+  gIntervention: {
+    id: "gIntervention", name: "Bắn Tỉa Intervention", desc: "Bắn tỉa huyền thoại: tia tức thì xuyên 4 quái, chí mạng +45%.",
+    type: "firearm", sprite: "a_intervention", proj: "bullet", rarity: "legend", cost: 0, shells: true, shellBig: true, beam: true,
+    damage: 10, fireRate: 60 / 50, mag: 7, reload: 2.6, auto: false, noise: 600, pierce: 3, critBonus: 0.45,
+    range: 700, spread: 0.001, knockback: 320, kick: 11, shake: [0.18, 4.5], color: "#ffe9a6", sound: "sniper", muzzleFx: "heavy",
+  },
+  gM60: {
+    id: "gM60", name: "Súng Máy M60", desc: "Súng máy băng 100 viên, nhịp chậm nhưng mỗi viên rất đau.",
+    type: "firearm", sprite: "a_m60", proj: "bullet", rarity: "legend", cost: 0, shells: true,
+    damage: 1.5, fireRate: 60 / 500, mag: 100, reload: 3.0, auto: true, noise: 450,
+    bulletSpeed: 540, range: 340, spread: 0.08, bulletRadius: 2, knockback: 90, kick: 3, shake: [0.06, 1.5], color: "#ffd34a", sound: "rifle", muzzleFx: "heavy",
+  },
+  gMg42: {
+    id: "gMg42", name: "MG42 Cưa Xương", desc: "1200 phát/phút, băng 50 viên: cưa đôi mọi thứ trước mặt.",
+    type: "firearm", sprite: "a_mg42", proj: "bullet", rarity: "legend", cost: 0, shells: true,
+    damage: 0.65, fireRate: 60 / 1200, mag: 50, reload: 2.2, auto: true, noise: 450,
+    bulletSpeed: 540, range: 300, spread: 0.1, bulletRadius: 2, knockback: 60, kick: 2, shake: [0.05, 1], color: "#ffd34a", sound: "rifle", muzzleFx: "heavy",
+  },
+  gRayGun: {
+    id: "gRayGun", name: "Ray Gun", desc: "Đạn plasma xanh lá nổ lan 45px, 12 viên mỗi băng.",
+    type: "firearm", sprite: "a_raygun", proj: "plasma", rarity: "legend", cost: 0, aoe: 45, explodeSource: "cannon",
+    damage: 3.0, fireRate: 60 / 180, mag: 12, reload: 1.6, auto: false, noise: 220,
+    bulletSpeed: 400, range: 300, spread: 0.02, bulletRadius: 3, knockback: 200, kick: 5, shake: [0.07, 1.6], color: "#7aff5a", sound: "energyGun", muzzleFx: "energy",
+  },
+  gIonCannon: {
+    id: "gIonCannon", name: "Ion Cannon", desc: "Pháo ion: tia laser dày xuyên tới 8 quái, mỗi băng 10 phát.",
+    type: "firearm", sprite: "a_ioncannon", proj: "laser", rarity: "legend", cost: 0, pierce: 7,
+    damage: 3.0, fireRate: 60 / 120, mag: 10, reload: 2.0, auto: false, noise: 240,
+    bulletSpeed: 760, range: 520, spread: 0.005, bulletRadius: 4, knockback: 160, kick: 5, shake: [0.08, 1.8], color: "#5af0ff", sound: "laser", muzzleFx: "energy",
+  },
+  gQuantumRifle: {
+    id: "gQuantumRifle", name: "Súng Trường Lượng Tử", desc: "Liên thanh plasma, mỗi viên nổ lan nhỏ 28px.",
+    type: "firearm", sprite: "a_scifi2", proj: "plasma", rarity: "legend", cost: 0, aoe: 28, explodeSource: "cannon",
+    damage: 1.6, fireRate: 60 / 360, mag: 30, reload: 1.6, auto: true, noise: 200,
+    bulletSpeed: 420, range: 320, spread: 0.03, bulletRadius: 3, knockback: 100, kick: 2, shake: [0.04, 1], color: "#6affd0", sound: "energyGun", muzzleFx: "energy",
+  },
+  gProtoX1: {
+    id: "gProtoX1", name: "Nguyên Mẫu X-1", desc: "Nguyên mẫu plasma tự động, nổ lan 36px, hơi lệch tâm.",
+    type: "firearm", sprite: "a_proto1", proj: "plasma", rarity: "legend", cost: 0, aoe: 36, explodeSource: "cannon",
+    damage: 2.4, fireRate: 60 / 240, mag: 16, reload: 1.5, auto: true, noise: 220,
+    bulletSpeed: 400, range: 300, spread: 0.05, bulletRadius: 3, knockback: 140, kick: 3, shake: [0.05, 1.2], color: "#ff9a3a", sound: "energyGun", muzzleFx: "energy",
+  },
+  gProtoX2: {
+    id: "gProtoX2", name: "Nguyên Mẫu X-2", desc: "Nguyên mẫu laser: tia tức thì xuyên 3 quái, chí mạng +20%.",
+    type: "firearm", sprite: "a_proto2", proj: "laser", rarity: "legend", cost: 0, beam: true,
+    damage: 5.0, fireRate: 60 / 100, mag: 8, reload: 2.0, auto: false, noise: 220, pierce: 3, critBonus: 0.2,
+    range: 560, spread: 0.003, knockback: 160, kick: 4, shake: [0.08, 1.6], color: "#ff5af0", sound: "laser", muzzleFx: "energy",
+  },
 };
 
 /** Vũ khí theo độ hiếm (rương bốc từ các danh sách này) */
@@ -185,7 +480,7 @@ export const WEAPON_LEVELS = [null, { dmg: 1, rate: 1 }, { dmg: 1.25, rate: 0.95
 export const WEAPON_MAX_LEVEL = 3;
 
 /** Loại vũ khí cận chiến (combo 3 đòn + phản đạn) */
-export const MELEE_TYPES = new Set(["melee", "sword", "hammer", "scythe", "gauntlet", "dragon"]);
+export const MELEE_TYPES = new Set(["melee", "sword", "hammer", "scythe", "gauntlet", "dragon", "blade"]);
 export const isMelee = (w) => MELEE_TYPES.has(w.type);
 /** Vũ khí có vỏ đạn văng ra khi bắn */
 export const ejectsShells = (w) => !!w.shells || w.type === "gun";
@@ -204,6 +499,7 @@ export function makeWeapon(def, lvl = 1) {
     damage: base.damage * L.dmg,
     fireRate: base.fireRate * L.rate,
     label: lvl > 1 ? `${base.name} ${"★".repeat(lvl)}` : base.name,
+    ...(base.mag ? { ammo: base.mag, reloadT: 0 } : null),   // súng dùng băng đạn: đầy đạn, không đang nạp
   };
 }
 
@@ -233,11 +529,54 @@ export function mergeResult(a, b) {
   return r ? { def: WEAPONS[r.out], lvl: 1, kind: "recipe" } : null;
 }
 
+// =====================================================================================
+//  BĂNG ĐẠN + NẠP ĐẠN + TIẾNG ỒN (súng Pixel Armory)
+//  Bản thể súng có `mag` thì có `ammo` (đạn còn) và `reloadT` (giây nạp còn lại; 0 = không nạp).
+//  main.js: mỗi frame gọi tickReload(); trước mỗi phát bắn gọi tryConsumeAmmo() (false = không bắn).
+// =====================================================================================
+/** Bắt đầu nạp đạn (chỉ khi còn thiếu đạn và chưa đang nạp). Trả về true nếu vừa bắt đầu. */
+export function startReload(w, game) {
+  if (!w || !w.mag || w.reloadT > 0 || w.ammo >= w.mag) return false;
+  w.reloadT = w.reload ?? 1.2;
+  void game;
+  return true;
+}
+/** Đếm lùi thời gian nạp; xong thì đầy băng + âm "reload" */
+export function tickReload(w, dt, game) {
+  if (!w || !(w.reloadT > 0)) return;
+  w.reloadT -= dt;
+  if (w.reloadT <= 0) { w.reloadT = 0; w.ammo = w.mag; game?.sound?.play("reload", 0.5); }
+}
+/** Trừ 1 viên cho 1 phát bắn. false = KHÔNG được bắn (đang nạp / hết đạn -> tự nạp + tiếng "tạch"). Vũ khí không có băng luôn true. */
+export function tryConsumeAmmo(w, game) {
+  if (!w?.mag) return true;
+  if (w.reloadT > 0) return false;
+  if (w.ammo <= 0) { startReload(w, game); game?.sound?.play("gunEmpty", 0.5); return false; }
+  w.ammo--;
+  if (w.ammo <= 0) startReload(w, game);
+  return true;
+}
+/** Chữ hiển thị đạn: "12/30" · đang nạp "NẠP 0.6s" · không có băng -> null */
+export function ammoLabel(w) {
+  if (!w?.mag) return null;
+  if (w.reloadT > 0) return `NẠP ${w.reloadT.toFixed(1)}s`;
+  return `${w.ammo}/${w.mag}`;
+}
+/** Bán kính tiếng ồn (px) khi bắn: zombie nghe thấy trong vòng này. Cận chiến = 0 (im lặng). */
+export function weaponNoise(w) {
+  if (!w) return 0;
+  if (w.noise !== undefined) return w.noise;
+  if (isMelee(w)) return 0;
+  return { gun: 300, minigun: 340, shotgun: 380, sniper: 480, rocket: 480, grenade: 440, laser: 200, cannon: 300, flamethrower: 200, meteor: 220,
+    lightning: 160, magic: 140, frostHand: 100, bow: 100, longbow: 100, frostbow: 100, boomerang: 60, disc: 80, shuriken: 40, poison: 120, soul: 140 }[w.type] ?? 140;
+}
+
 /** Độ dài nòng (tính từ tâm thân) theo loại vũ khí */
 export function muzzleLength(w) {
+  if (w.sprite) { const L = gunMuzzleLength(w); if (L !== null) return L; }
   return { frostHand: 5, magic: 22, shotgun: 19, laser: 19, grenade: 18, sword: 20, melee: 14, minigun: 20, flamethrower: 18, frostbow: 12, boomerang: 10, lightning: 18,
     poison: 17, disc: 14, scythe: 22, sniper: 24, rocket: 20, meteor: 22, hammer: 18, bow: 12, soul: 22, shuriken: 8,
-    gauntlet: 12, longbow: 12, cannon: 21, dragon: 24 }[w.type] ?? 16;
+    gauntlet: 12, longbow: 12, cannon: 21, dragon: 24, blade: 16, firearm: 18 }[w.type] ?? 16;
 }
 
 // =====================================================================================
@@ -245,7 +584,10 @@ export function muzzleLength(w) {
 // =====================================================================================
 export function drawWeaponFallback(c, weapon) {
   const col = weapon.color;
+  if (weapon.sprite && drawGunSprite(c, weapon)) return;   // súng Pixel Armory: ảnh thật (src/guns.js)
   switch (weapon.type) {
+    case "blade": drawBlade(c, weapon); break;
+    case "firearm": drawFirearmFallback(c, weapon); break;
     case "frostHand":       // tay không: icon gai băng (trên tay nhân vật chỉ là đốm băng sáng, xem main.js)
       c.fillStyle = "#2c58aa"; c.fillRect(0, -1, 12, 3);
       c.fillStyle = "#a6ecff"; c.fillRect(1, -1, 10, 2); c.fillRect(11, 0, 2, 1);
@@ -448,13 +790,72 @@ export function drawWeaponFallback(c, weapon) {
   }
 }
 
+/** Vũ khí cận chiến mới (dao găm / xà beng / dao rựa / rìu / dùi cui) vẽ bằng code, gốc = tay cầm, lưỡi sang PHẢI */
+function drawBlade(c, w) {
+  switch (w.look) {
+    case "knife":
+      c.fillStyle = "#1a1a22"; c.fillRect(-2, -1, 6, 3);
+      c.fillStyle = "#4a4a5e"; c.fillRect(-2, -1, 6, 1); c.fillRect(0, 1, 1, 1); c.fillRect(2, 1, 1, 1);
+      c.fillStyle = "#c89a2a"; c.fillRect(4, -3, 1, 6);
+      c.fillStyle = "#8a8fa8"; c.fillRect(5, -1, 9, 3);
+      c.fillStyle = "#e8ecff"; c.fillRect(5, -1, 9, 1); c.fillRect(14, 0, 1, 1);
+      c.fillStyle = "#6c6c88"; c.fillRect(6, 1, 7, 1);
+      break;
+    case "crowbar":
+      c.fillStyle = "#4a4e66"; c.fillRect(-4, -1, 4, 3);
+      c.fillStyle = "#b8321e"; c.fillRect(0, 0, 17, 2);
+      c.fillStyle = "#e8654a"; c.fillRect(0, 0, 17, 1);
+      c.fillStyle = "#7c1a1e"; c.fillRect(0, 1, 17, 1);
+      c.fillStyle = "#b8321e"; c.fillRect(16, -3, 3, 3); c.fillRect(18, -4, 2, 2); c.fillRect(17, 2, 2, 1);
+      c.fillStyle = "#e8654a"; c.fillRect(16, -3, 3, 1);
+      c.fillStyle = "#1a1a24"; c.fillRect(19, -4, 1, 1);
+      break;
+    case "machete":
+      c.fillStyle = "#3a2416"; c.fillRect(-3, -1, 7, 3);
+      c.fillStyle = "#6a4426"; c.fillRect(-3, -1, 7, 1); c.fillRect(0, 1, 1, 1); c.fillRect(2, 1, 1, 1);
+      c.fillStyle = "#8a8fa8"; c.fillRect(4, -2, 1, 5);
+      c.fillStyle = "#6c6c88"; c.fillRect(5, 1, 15, 1);
+      c.fillStyle = "#c8cde0"; c.fillRect(5, -1, 15, 2); c.fillRect(13, -2, 7, 1); c.fillRect(20, -1, 1, 1);
+      c.fillStyle = "#ffffff"; c.fillRect(6, -1, 12, 1); c.fillRect(14, -2, 5, 1);
+      break;
+    case "hatchet":
+      c.fillStyle = "#5a3418"; c.fillRect(-3, 0, 16, 2);
+      c.fillStyle = "#8a5428"; c.fillRect(-3, 0, 16, 1);
+      c.fillStyle = "#3a2a10"; c.fillRect(-4, -1, 2, 4);
+      c.fillStyle = "#4a4e66"; c.fillRect(10, -4, 4, 9);
+      c.fillStyle = "#8a8fa8"; c.fillRect(11, -5, 4, 11);
+      c.fillStyle = "#e8ecff"; c.fillRect(15, -6, 2, 13); c.fillRect(11, -5, 4, 1);
+      c.fillStyle = "#ffffff"; c.fillRect(16, -4, 1, 9);
+      break;
+    default:   // baton
+      c.fillStyle = "#1a1a24"; c.fillRect(-2, -1, 17, 3);
+      c.fillStyle = "#3a3a4a"; c.fillRect(-2, -1, 17, 1);
+      c.fillStyle = "#6c6c88"; c.fillRect(-2, 1, 6, 1);
+      c.fillStyle = "#c8cde0"; c.fillRect(4, -1, 1, 3); c.fillRect(15, -1, 1, 3);
+      c.fillStyle = "#ff4a4a"; c.fillRect(10, 0, 2, 1);
+  }
+}
+
+/** Súng Pixel Armory khi CHƯA tải được ảnh: hình khối đơn giản */
+function drawFirearmFallback(c, w) {
+  c.fillStyle = "#3a2a20"; c.fillRect(-1, -1, 5, 4);
+  c.fillStyle = "#2b2b3a"; c.fillRect(2, -3, 16, 4);
+  c.fillStyle = "#6c6c88"; c.fillRect(2, -3, 16, 1);
+  c.fillStyle = w.color ?? "#ffe26b"; c.fillRect(16, -3, 2, 1);
+}
+
 /** Bề ngang hình vẽ thay thế [trái, phải] để căn giữa icon */
 export function weaponSpan(w) {
+  if (w.sprite) { const sp = gunSpan(w); if (sp) return sp; }
+  if (w.type === "blade") return { knife: [-2, 15], crowbar: [-4, 20], machete: [-3, 21], hatchet: [-4, 17] }[w.look] ?? [-2, 16];
   return { frostHand: [0, 14], gun: [0, 13], melee: [0, 10], magic: [-2, 20], shotgun: [-3, 18], laser: [0, 19], grenade: [0, 16], sword: [-2, 23],
     minigun: [-2, 20], flamethrower: [-2, 18], frostbow: [0, 10], boomerang: [0, 10], lightning: [0, 18],
     poison: [-2, 16], disc: [0, 17], scythe: [-4, 19], sniper: [-4, 24], rocket: [-5, 21], meteor: [-2, 21], hammer: [-2, 20], bow: [0, 11], soul: [-2, 21], shuriken: [1, 10],
-    gauntlet: [0, 12], longbow: [0, 11], cannon: [-2, 23], dragon: [-2, 25] }[w.type] ?? [0, 13];
+    gauntlet: [0, 12], longbow: [0, 11], cannon: [-2, 23], dragon: [-2, 25], firearm: [-1, 18] }[w.type] ?? [0, 13];
 }
+
+/** Độ lệch dọc (px) từ gốc vẽ tới tâm hình — loot.js dùng để súng sprite nằm đúng tâm khi rơi trên đất */
+export function weaponCenterY(w) { return w.sprite ? gunCenterY(w) : 0; }
 
 const pulseOf = (age) => (Math.sin(age * 26) > 0 ? 1 : 0);
 
@@ -501,6 +902,8 @@ export class Bullet {
     this.zap = opts.zap ?? 0;                   // trúng quái thì sét nhảy sang `zap` quái khác (Cung Thần Bão)
     this.pull = opts.pull ?? 0;                 // bán kính hút quái về tâm (Pháo Hư Không)
     this.grow = opts.grow ?? 0;                 // sóng lửa rồng to dần
+    this.sprite = opts.sprite ?? null;          // style "gun": tên ảnh đạn trong src/guns.js (bullet | pellet | rocket | grenade | laser | plasma)
+    this.arc = opts.arc ?? 0;                   // độ cao đỉnh vòng cung (px) — lựu đạn bay cầu vồng
     if (opts.boomerang) {
       const b = (this.boomerang = this.ownBoom ??= {});
       b.range = opts.boomerang; b.sx = x; b.sy = y; b.back = false; b.speed = opts.speed;
@@ -591,6 +994,10 @@ export class Bullet {
     this.age += dt;
     if (this.boomerang) this.updateBoomerang(dt, game);
     else if (this.homing) this.updateHoming(dt, game);
+    else if (this.accel && this.speed < this.maxSpeed) {    // tăng tốc thẳng (Bazooka)
+      this.speed = Math.min(this.maxSpeed, this.speed + this.accel * dt);
+      this.vx = Math.cos(this.angle) * this.speed; this.vy = Math.sin(this.angle) * this.speed;
+    }
     if (this.dead) return;
     if (this.pull) game.pullEnemies?.(this.x, this.y, this.pull, dt);
     if (this.grow) this.radius = Math.min(this.radius + this.grow * dt, 16);
@@ -638,6 +1045,7 @@ export class Bullet {
       return;
     }
     this.x = px; this.y = py;
+    if (this.sprite && !this.explosive) gunImpact(this.x + Math.cos(this.angle) * 2, this.y + Math.sin(this.angle) * 2);   // tia lửa chạm tường
     this.finish(game);
   }
 
@@ -653,7 +1061,12 @@ export class Bullet {
     c.save();
     c.translate(Math.round(this.x), Math.round(this.y));
     const st = this.style;
-    if (st === "orb" || st === "grenade") {
+    if (st === "gun" && drawGunProjectile(c, this)) {
+      // đạn sprite của súng Pixel Armory (ảnh trong src/guns.js)
+    } else if (st === "gun") {   // chưa tải ảnh: chấm sáng
+      c.rotate(this.angle);
+      c.fillStyle = this.color; c.fillRect(-3, -1, 6, 2); c.fillStyle = "#ffffff"; c.fillRect(1, -1, 2, 2);
+    } else if (st === "orb" || st === "grenade") {
       const r = this.radius + (Math.sin(this.age * 30) > 0 ? 1 : 0);
       c.fillStyle = withAlpha(this.color, 0.25); c.fillRect(-r - 2, -r - 2, (r + 2) * 2, (r + 2) * 2);
       c.fillStyle = this.color; c.fillRect(-r, -r + 1, r * 2, r * 2 - 2); c.fillRect(-r + 1, -r, r * 2 - 2, r * 2);
@@ -850,6 +1263,7 @@ function splitAngles(extra, step) {
 const SHOTGUN_SPLIT = [1, 0.8, 0.68];
 
 export function fireWeapon(p, game, w) {
+  if (w.type === "firearm") { fireFirearm(p, game, w); return; }
   const m = p.muzzle, mods = p.mods;
   const per = w.type === "shotgun" ? SHOTGUN_SPLIT[Math.min(2, mods.split)] : mods.splitDmg;   // hệ số mỗi tia
   const dmg = w.damage * mods.damageMul * per;
@@ -1006,6 +1420,56 @@ export function fireWeapon(p, game, w) {
   }
   // vỏ đạn văng ra khỏi khe súng, rơi lạch cạch xuống đất
   if (ejectsShells(w)) game.ejectShell?.(p.handX, p.handY - 1, p.aim, w.type === "shotgun" ? "shell" : w.type === "sniper" ? "big" : "brass");
+}
+
+/**
+ * >>> SÚNG PIXEL ARMORY <<< (type "firearm"): đạn sprite, lửa nòng sprite, vỏ đạn sprite, giật nòng, rung màn hình.
+ * Không tự trừ đạn: main.js gọi tryConsumeAmmo(w, game) TRƯỚC khi gọi hàm này.
+ *   beam     -> tia tức thì xuyên `pierce` quái (bắn tỉa)
+ *   pellets  -> chùm đạn chì tỏa trong ±spread
+ *   lob      -> bay vòng cung tới chỗ trỏ chuột rồi nổ (phóng lựu)
+ */
+function fireFirearm(p, game, w) {
+  const m = p.muzzle, mods = p.mods;
+  const multi = (w.pellets ?? 1) > 1;
+  const per = multi ? SHOTGUN_SPLIT[Math.min(2, mods.split)] : mods.splitDmg;
+  const dmg = w.damage * mods.damageMul * per;
+  const knock = (w.knockback ?? 100) * mods.knockMul;
+  game.noteWeaponUsed(w);
+  game.sound.play(w.sound ?? "shoot", 0.4);
+  gunFlash(m.x, m.y, p.aim, w.muzzleFx ?? "small");
+  game.flashMuzzle(m.x, m.y, w.color, w.beam || multi ? 5 : 3);
+  p.recoil = w.kick ?? 3;
+  const sk = w.shake ?? [0.05, 1];
+  if (sk[1] > 0) game.shake(sk[0], sk[1], p.aim + Math.PI);
+
+  if (w.beam) {   // bắn tỉa: tia tức thì
+    for (const off of splitAngles(mods.split, 0.08)) fireSniper(game, m.x, m.y, p.aim + off + rand(-w.spread, w.spread), w, dmg, knock, mods.pierce);
+  } else if (multi) {   // hoa cải: chùm chì
+    const n = w.pellets + mods.split * 2;
+    for (let i = 0; i < n; i++) {
+      const a = p.aim + ((i / Math.max(1, n - 1)) - 0.5) * w.spread * 2 + rand(-0.03, 0.03);
+      const speed = w.bulletSpeed * rand(0.92, 1.08);
+      game.bullets.push(Bullet.obtain(m.x, m.y, a, { speed, damage: dmg, radius: w.bulletRadius ?? 2, color: w.color, style: "gun", sprite: w.proj, life: w.range / speed, knock, bounces: mods.bounce, critBonus: w.critBonus ?? 0 }));
+    }
+  } else {
+    let life = w.life ?? w.range / w.bulletSpeed, speed = w.bulletSpeed, arc = 0;
+    if (w.lob) {   // lựu đạn: rơi đúng chỗ trỏ chuột (70–w.range px)
+      const aim = game.aimTarget?.(p), d = aim ? Math.hypot(aim.x - m.x, aim.y - m.y) : w.range * 0.7;
+      life = Math.max(0.2, Math.min(w.range, Math.max(70, d)) / speed);
+      arc = 14;
+    }
+    const explosive = w.aoe ? { radius: w.aoe, source: w.explodeSource ?? "rocket" } : null;
+    for (const off of splitAngles(mods.split, 0.1)) {
+      const a = p.aim + off + (w.spread ? rand(-w.spread, w.spread) : 0);
+      game.bullets.push(Bullet.obtain(m.x, m.y, a, {
+        speed, damage: dmg, radius: w.bulletRadius ?? 2, color: w.color, style: "gun", sprite: w.proj, life, knock, bounces: explosive ? 0 : mods.bounce,
+        pierce: (w.pierce ?? 0) + (explosive ? 0 : mods.pierce), critBonus: w.critBonus ?? 0, explosive, trail: w.trail ?? null, arc,
+        accel: w.accel ?? 0, maxSpeed: w.maxSpeed ?? speed,
+      }));
+    }
+  }
+  if (w.shells) gunShell(p.handX, p.handY - 1, p.aim, !!w.shellBig);   // vỏ đạn văng ra, rơi lạch cạch xuống đất
 }
 
 /**
@@ -1226,6 +1690,7 @@ export function meleeSwing(p, game, w, step = 0) {
     if (w.burn) e.burnT = Math.max(e.burnT ?? 0, w.burn);
     const killed = game.damageEnemy(e, dmg, fin || kind === "scythe" ? Math.atan2(ey, ex) : p.aim, knock, hitOpts);
     if (killed && w.reap) p.reap(game, w.reap);
+    if (w.stun && !killed && !e.dead) e.stun?.(w.stun * (fin ? 1.6 : 1));   // Xà Beng / Dùi Cui: choáng
   }
   // Long Kiếm: phóng sóng lửa rồng (đòn kết thúc: 3 sóng hình quạt)
   if (kind === "dragon") {
@@ -1270,6 +1735,7 @@ export const enemyBulletHitsPlayer = (b, p) => circleHit(b.x, b.y, b.radius, p.c
 
 /** Icon nhỏ cho thẻ / HUD: vẽ vũ khí vào giữa ô (w x h) */
 export function drawWeaponIcon(g, weapon, x, y, w, h, scale = 1) {
+  if (weapon.sprite && drawGunIcon(g, weapon, x, y, w, h, scale)) return;   // súng ảnh thật
   const span = weaponSpan(weapon);
   g.save();
   g.beginPath(); g.rect(x, y, w, h); g.clip();

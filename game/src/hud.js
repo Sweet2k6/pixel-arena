@@ -3,11 +3,14 @@
 //  Thanh EXP sát mép trên · 2 ô vũ khí · Minimap góc dưới phải · Mũi tên chỉ hướng · Thanh máu Boss
 // =====================================================================================
 import { WORLD } from "./world.js";
-import { drawWeaponIcon, WEAPON_RARITY, mergeResult } from "./weapons.js";
+import { drawWeaponIcon, WEAPON_RARITY, mergeResult, ammoLabel } from "./weapons.js";
 import { clamp, withAlpha, TAU } from "./util.js";
 
-/** Minimap: tỉ lệ 2400x1600 -> 80x53 pixel game (= 160x106 pixel màn hình ở mức phóng x2) */
+/** Minimap: rộng 80 pixel game, cao tự tính theo tỉ lệ bản đồ (2400x1600 -> 80x53 · 3200x2240 -> 80x56) */
 export const MINIMAP = { w: 80, h: 53, margin: 4 };
+
+/** >>> THANH MÁU / GIÁP / NĂNG LƯỢNG HIỂN THỊ THEO %: 4/4 -> "100%", 3/4 -> "75%" */
+export function pct(v, max) { return `${max > 0 ? Math.max(0, Math.round((v / max) * 100)) : 0}%`; }
 
 export function text(ctx, s, x, y, color) {
   ctx.fillStyle = "#000";
@@ -80,11 +83,16 @@ export function drawWeaponSlots(ctx, x, y, p, time) {
     if (!w) { text(ctx, "— trống —", x + 38, sy + 3, "#5a5278"); continue; }
     ctx.fillStyle = "#15111f"; ctx.fillRect(x + 10, sy + 2, 26, 9);
     drawWeaponIcon(ctx, w, x + 10, sy + 2, 26, 9, 1);
-    const lab = w.label ?? w.name, cost = w.cost ?? 0;
-    const max = cost ? 17 : 22;
+    const lab = w.label ?? w.name, cost = w.cost ?? 0, ammo = ammoLabel(w);
+    const max = ammo ? 13 : cost ? 16 : 22;
     text(ctx, lab.length > max ? lab.slice(0, max - 1) + "…" : lab, x + 39, sy + 3, active ? (WEAPON_RARITY[w.rarity] ?? "#ffffff") : "#8a82a8");
-    if (cost) {   // năng lượng mỗi phát
-      const str = cost < 1 ? cost.toFixed(1).slice(1) : String(cost), tw = Math.ceil(ctx.measureText(str).width);
+    if (ammo) {   // súng thật: số đạn trong băng / đang nạp
+      const reloading = w.reloadT > 0, empty = !reloading && w.ammo <= Math.max(1, Math.floor(w.mag * 0.2));
+      ctx.textAlign = "right"; text(ctx, ammo, x + 123, sy + 3, reloading ? "#ffb030" : empty ? "#ff7a5a" : "#e8e2f6"); ctx.textAlign = "left";
+      if (reloading && w.reload) { ctx.fillStyle = "#ffb030"; ctx.fillRect(x + 39, sy + 11, Math.round(84 * (1 - w.reloadT / w.reload)), 1); }
+    } else if (cost) {   // năng lượng mỗi phát — tính theo % thanh năng lượng
+      const pc = (cost / p.maxEnergy) * 100;
+      const str = `${pc < 1 ? pc.toFixed(1).replace(/^0/, "") : Math.round(pc)}%`, tw = Math.ceil(ctx.measureText(str).width);
       ctx.textAlign = "right"; text(ctx, str, x + 123, sy + 3, p.energy >= cost ? "#7cc8ff" : "#ff5a5a"); ctx.textAlign = "left";
       drawBolt(ctx, x + 118 - tw, sy + 3);
     }
@@ -133,9 +141,13 @@ export function drawMinimap(ctx, W, H, game) {
     ctx.fillStyle = Math.sin(game.time * 8) > -0.3 ? "#ffe26b" : "#c8892a";
     ctx.fillRect(Math.round(x + c.x * sx) - 1, Math.round(y + c.y * sy) - 1, 3, 3);
   }
-  // Quái: chấm đỏ, Mini-Boss: chấm tím lớn
+  // Rút Quân: nhiệm vụ, bãi đáp, hòm đồ ở gần
+  game.run?.drawMinimap(ctx, x, y, sx, sy, game.time);
+  // Quái: chấm đỏ, Mini-Boss: chấm tím lớn (Rút Quân: chỉ hiện zombie trong tầm radar quanh người chơi)
+  const P = game.player, radar = game.run ? (game.radar ?? 520) : Infinity, R2 = radar * radar;
   for (const e of game.enemies) {
     if (e.boss) continue;
+    if (radar !== Infinity && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 > R2) continue;
     ctx.fillStyle = e.elite ? "#ff9a3a" : "#ff3b3b";
     ctx.fillRect(Math.round(x + e.x * sx), Math.round(y + e.y * sy), e.elite ? 2 : 1, e.elite ? 2 : 1);
   }
@@ -177,8 +189,8 @@ export function drawOffscreenIndicators(ctx, W, H, game) {
 }
 
 /** Thanh máu lớn của Mini-Boss ở cạnh trên màn hình */
-export function drawBossBar(ctx, W, boss, time) {
-  const w = 200, x = Math.round(W / 2 - w / 2), y = 14;
+export function drawBossBar(ctx, W, boss, time, y = 14) {
+  const w = 200, x = Math.round(W / 2 - w / 2);
   panel(ctx, x - 4, y - 4, w + 8, 20, boss.cfg.aura ?? "#7a3cc8");
   ctx.font = "8px monospace"; ctx.textBaseline = "top"; ctx.textAlign = "center";
   text(ctx, boss.cfg.name, W / 2, y - 2, "#e0c8ff");
@@ -188,8 +200,7 @@ export function drawBossBar(ctx, W, boss, time) {
 }
 
 /** Dòng chữ thông báo giữa màn hình (Mini-Boss xuất hiện, nhặt đồ...) */
-export function drawBanners(ctx, W, H, banners) {
-  let y = 52;
+export function drawBanners(ctx, W, H, banners, y = 52, maxW = W - 12, backdrop = false) {
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   for (const b of banners) {
     const a = clamp(b.life / 0.4, 0, 1);
@@ -197,7 +208,11 @@ export function drawBanners(ctx, W, H, banners) {
     const size = b.big ? 14 : 9;
     ctx.font = b.big ? `bold ${size}px monospace` : `${size}px monospace`;
     const w = ctx.measureText(b.text).width;
-    if (w > W - 12) ctx.font = `${b.big ? "bold " : ""}${Math.max(7, Math.floor(size * (W - 12) / w))}px monospace`;   // chữ dài: tự thu nhỏ cho vừa màn hình
+    if (w > maxW) ctx.font = `${b.big ? "bold " : ""}${Math.max(7, Math.floor(size * maxW / w))}px monospace`;   // chữ dài: tự thu nhỏ cho vừa
+    if (backdrop) {   // dải nền mờ cho dễ đọc giữa trận
+      const tw = Math.min(maxW, w) + 10, th = b.big ? 16 : 11;
+      ctx.fillStyle = `rgba(8,6,14,${0.55 * a})`; ctx.fillRect(Math.round(W / 2 - tw / 2), y - 2, Math.round(tw), th);
+    }
     text(ctx, b.text, W / 2, y, b.color);
     y += b.big ? 18 : 12;
   }

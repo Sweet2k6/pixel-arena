@@ -585,16 +585,8 @@ export class World {
     g.imageSmoothingEnabled = false;
     const B = this.biome;
 
-    // --- Sàn ---
-    const tile = this.images.floorTile;
-    if (tile) {
-      // >>> ẢNH SÀN CỦA BẠN (assets floorTile) được lặp kín bản đồ ở đây
-      g.fillStyle = g.createPattern(tile, "repeat");
-      g.fillRect(0, 0, WORLD.w, WORLD.h);
-    } else {
-      (FLOOR_PAINTERS[B.id] ?? FLOOR_PAINTERS.dungeon)(g, B);
-      this.paintDecor(g);
-    }
+    // --- Sàn (lớp con ghi đè paintFloor) ---
+    this.paintFloor(g);
 
     // --- Hố dung nham ---
     for (const p of this.pits) {
@@ -659,6 +651,19 @@ export class World {
     // --- Tường bao ---
     this.paintWalls(g);
     return cv;
+  }
+
+  /** Vẽ sàn: ảnh floorTile lặp kín, hoặc bộ vẽ theo biome + đồ trang trí */
+  paintFloor(g) {
+    const B = this.biome, tile = this.images.floorTile;
+    if (tile) {
+      // >>> ẢNH SÀN CỦA BẠN (assets floorTile) được lặp kín bản đồ ở đây
+      g.fillStyle = g.createPattern(tile, "repeat");
+      g.fillRect(0, 0, WORLD.w, WORLD.h);
+    } else {
+      (FLOOR_PAINTERS[B.id] ?? FLOOR_PAINTERS.dungeon)(g, B);
+      this.paintDecor(g);
+    }
   }
 
   /** Đồ trang trí rải rác trên sàn (không va chạm): xương, đầu lâu, thảm, nấm, hoa, đá vụn, tuyết đọng... */
@@ -865,10 +870,10 @@ function pushOut(e, o, r) {
   return true;
 }
 
-function ellipse(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, Math.max(1, rx), Math.max(1, ry), 0, 0, TAU); g.fill(); }
+export function ellipse(g, x, y, rx, ry) { g.beginPath(); g.ellipse(x, y, Math.max(1, rx), Math.max(1, ry), 0, 0, TAU); g.fill(); }
 
 /** Pha màu "#rrggbb" sáng/tối theo k (-1..1) -> "#rrggbb" */
-function shade(h, k) {
+export function shade(h, k) {
   const v = parseInt(h.slice(1, 7), 16), f = (c) => clamp(Math.round(k >= 0 ? c + (255 - c) * k : c * (1 + k)), 0, 255).toString(16).padStart(2, "0");
   return `#${f((v >> 16) & 255)}${f((v >> 8) & 255)}${f(v & 255)}`;
 }
@@ -876,7 +881,7 @@ function shade(h, k) {
 // =====================================================================================
 //  VẼ SÀN THEO BIOME
 // =====================================================================================
-const FLOOR_PAINTERS = {
+export const FLOOR_PAINTERS = {
   /** Hầm ngục: gạch đá 16px vát cạnh, mỗi viên 1 tông, nứt vỡ, rêu góc, viên gạch lõm */
   dungeon(g, B) {
     const F = B.floor, T = 16;
@@ -986,7 +991,7 @@ const DECOR = {
   ice: ["snowpile", "pebbles", "icicle", "crack", "bones"],
   grave: ["bones", "bones", "skull", "candle", "flowerDead", "pebbles", "crossSmall", "twig"],
 };
-const DECOR_DRAW = {
+export const DECOR_DRAW = {
   bones(g, x, y) { g.fillStyle = "#1a1620"; g.fillRect(x - 4, y + 1, 9, 1); g.fillStyle = "#d8d0bc"; g.fillRect(x - 4, y, 8, 1); g.fillRect(x - 5, y - 1, 2, 3); g.fillRect(x + 3, y - 1, 2, 3); if (Math.random() < 0.5) { g.fillRect(x - 1, y + 2, 1, 4); } },
   skull(g, x, y) { g.fillStyle = "#1a1620"; g.fillRect(x - 3, y - 2, 7, 6); g.fillStyle = "#e8e0cc"; g.fillRect(x - 3, y - 3, 6, 5); g.fillRect(x - 2, y + 2, 4, 1); g.fillStyle = "#2a2028"; g.fillRect(x - 2, y - 1, 2, 2); g.fillRect(x + 1, y - 1, 1, 2); },
   pebbles(g, x, y) { for (let i = 0; i < 4; i++) { const px = x + randInt(-5, 5), py = y + randInt(-3, 3); g.fillStyle = "rgba(0,0,0,0.3)"; g.fillRect(px, py + 1, 2, 1); g.fillStyle = pick(["#6a6478", "#4a4458", "#8a8496"]); g.fillRect(px, py, 2, 1); } },
@@ -1030,7 +1035,11 @@ const WALL_DECOR = {
 };
 
 /** Vẽ 1 vật cản theo phong cách (mặt trên sáng + mặt trước tối tạo chiều sâu) */
-function drawPillar(g, s, B) {
+/** Đăng ký kiểu vật cản mới: SOLID_STYLES[style] = (g, s, B) => vẽ lên canvas nền (chế độ Rút Quân dùng) */
+export const SOLID_STYLES = {};
+
+export function drawPillar(g, s, B) {
+  if (s.style && SOLID_STYLES[s.style]) { SOLID_STYLES[s.style](g, s, B); return; }
   const W = B.wall, face = Math.min(10, Math.floor(s.h * 0.3)), style = s.style ?? B.pillarStyle;
   if (style === "brazier") {   // lò lửa: chân sắt + chậu than
     const cx = s.x + s.w / 2;
@@ -1080,7 +1089,7 @@ function drawPillar(g, s, B) {
 }
 
 /** Bia mộ / hầm mộ (Nghĩa Trang) */
-function drawTomb(g, s, B) {
+export function drawTomb(g, s, B) {
   const W = B.wall, cx = s.x + s.w / 2;
   if (s.style === "grave") {   // bia mộ nhỏ: đầu tròn, khắc chữ thập, rêu dưới chân
     const h = 18, top = s.y + s.h - h;

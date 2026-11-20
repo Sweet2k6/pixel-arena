@@ -43,6 +43,13 @@ export class TouchControls {
       <button type="button" class="tbtn t-merge hidden" data-key="g" aria-label="Ghép vũ khí">⚒<small>GHÉP</small></button>
       <button type="button" class="tbtn t-skill" data-key=" " aria-label="Kỹ năng"><span class="cd"></span>★<small>KỸ NĂNG</small></button>
       <button type="button" class="tbtn t-dash" data-key="shift" aria-label="Lướt"><span class="cd"></span>»<small>LƯỚT</small></button>
+      <div class="t-bagrow hidden" aria-label="Túi Chiến Thuật">
+        <button type="button" class="t-bag empty" data-key="z" aria-label="Ô túi 1"></button>
+        <button type="button" class="t-bag empty" data-key="x" aria-label="Ô túi 2"></button>
+        <button type="button" class="t-bag empty" data-key="c" aria-label="Ô túi 3"></button>
+        <button type="button" class="t-bag empty" data-key="v" aria-label="Ô túi 4"></button>
+        <button type="button" class="t-reload" data-key="r" aria-label="Nạp đạn">R</button>
+      </div>
       <div class="t-pausemenu hidden">
         <p>TẠM DỪNG</p>
         <button type="button" class="btn-start t-resume">TIẾP TỤC</button>
@@ -56,7 +63,9 @@ export class TouchControls {
       skill: root.querySelector(".t-skill"), dash: root.querySelector(".t-dash"), swap: root.querySelector(".t-swap"),
       use: root.querySelector(".t-use"), merge: root.querySelector(".t-merge"),
       pauseMenu: root.querySelector(".t-pausemenu"),
+      bagRow: root.querySelector(".t-bagrow"), bags: [...root.querySelectorAll(".t-bag")],
     };
+    this.bagSig = "";
     this.bindStick(this.el.zl, this.el.move, (x, y, on) => {
       this.input.joy.x = on ? x : 0;
       this.input.joy.y = on ? y : 0;
@@ -67,7 +76,7 @@ export class TouchControls {
       else { if (!on) this.input.touchAim = null; this.input.mouse.left = false; }
     });
     // Nút bấm: chạm = nhấn phím tương ứng
-    for (const b of root.querySelectorAll(".tbtn")) {
+    for (const b of root.querySelectorAll(".tbtn, .t-bag, .t-reload")) {
       const press = (e) => { e.preventDefault(); e.stopPropagation(); b.classList.add("down"); this.actions.press(b.dataset.key); navigator.vibrate?.(8); };
       const up = (e) => { e.preventDefault(); b.classList.remove("down"); };
       b.addEventListener("touchstart", press, { passive: false });
@@ -137,6 +146,25 @@ export class TouchControls {
     this.el.swap.classList.toggle("disabled", !p.weapons[1]);
     this.el.use.classList.toggle("disabled", !game.interactTarget);
     this.el.merge.classList.toggle("hidden", !p.mergeable);
+    // Rút Quân: 4 nút Túi Chiến Thuật + nút nạp đạn (vẽ lại icon khi túi thay đổi)
+    const run = game.run;
+    this.el.bagRow.classList.toggle("hidden", !run);
+    if (run) {
+      const sig = run.bag.map((s) => (s ? `${s.id}${s.n}` : "-")).join("|");
+      if (sig !== this.bagSig) {
+        this.bagSig = sig;
+        run.bag.forEach((s, i) => {
+          const b = this.el.bags[i];
+          b.replaceChildren();
+          b.classList.toggle("empty", !s);
+          if (!s) return;
+          const cv = document.createElement("canvas"); cv.width = cv.height = 16;
+          const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; game.drawItemIcon?.(c2, s.id, 0, 0, 16);
+          const n = document.createElement("span"); n.className = "cnt"; n.textContent = s.n;
+          b.append(cv, n);
+        });
+      }
+    }
   }
 
   reset() {

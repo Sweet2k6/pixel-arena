@@ -17,6 +17,14 @@
 //    src/ambient.js         — ÁNH SÁNG, thời tiết, viền tối
 //    src/hud.js             — HUD, minimap, mũi tên chỉ hướng, thanh máu Boss
 //    src/actors.js          — hình người pixel (nhân vật / quái hình người)
+//  --- bản 5.0: NHẢY DÙ – NHIỆM VỤ – RÚT QUÂN (chế độ chính; lối chơi cũ = Chế Độ Giải Trí) ---
+//    src/stash.js           — KHO ĐỒ vĩnh viễn + TÚI CHIẾN THUẬT 4 ô (Z X C V), icon vật phẩm
+//    src/extractMap.js      — bản đồ 3200x2240, 4 khu, hòm tiếp tế, điểm nhảy dù, bãi rút quân
+//    src/hordeAI.js         — zombie tuần tra theo ĐÀN 5–6 con, hú lên khi phát hiện, nghe tiếng súng
+//    src/missions.js        — nhiệm vụ: chiếm cứ điểm, cứu người, phá ổ dịch, tải dữ liệu
+//    src/deploy.js          — bản đồ chiến thuật chọn điểm nhảy, máy bay + bung dù + sóng xung kích
+//    src/extraction.js      — đồng hồ ván, dùng đồ, pháo sáng, trực thăng, vùng độc, tổng kết
+//    src/guns.js            — kho súng Pixel Armory (ảnh súng thật, lửa nòng, vỏ đạn)
 //
 //    fx-config.js           — >>> MAP SPRITESHEET HIỆU ỨNG / NHÂN VẬT (số cột, hàng, fps, điểm gốc)
 //    src/effects.js         — EffectManager: phát hiệu ứng theo frame, Object Pool, tối đa MAX_EFFECTS
@@ -40,7 +48,8 @@ import { EFFECTS, ACTORS, MAX_EFFECTS } from "./fx-config.js";
 import { CHARACTERS, STAT_MAX, ARMOR_REGEN } from "./characters.js";
 import { TAU, clamp, circleHit, pointSegDist2, angleDiff, rand, rndSeed, lighten, withAlpha, fmtNum } from "./src/util.js";
 import { BIOMES, ENV, World, Camera, WORLD } from "./src/world.js";
-import { fireWeapon, fireCharged, meleeSwing, isMelee, mergeResult, muzzleLength, drawWeaponFallback, drawWeaponIcon, enemyBulletHitsPlayer, jaggedPath, Bullet, EnemyBullet, WEAPONS, RECIPES, makeWeapon, WEAPON_MAX_LEVEL } from "./src/weapons.js";
+import { fireWeapon, fireCharged, meleeSwing, isMelee, mergeResult, muzzleLength, drawWeaponFallback, drawWeaponIcon, enemyBulletHitsPlayer, jaggedPath, Bullet, EnemyBullet, WEAPONS, RECIPES, makeWeapon, WEAPON_MAX_LEVEL,
+  tickReload, tryConsumeAmmo, startReload, ammoLabel, weaponNoise } from "./src/weapons.js";
 import { Enemy, pickEnemyType, MAX_ENEMY_RADIUS, CROWD, BOSS_ROTATION, ENEMY_TYPES } from "./src/enemies.js";
 import { Chest, Pickup, ExpOrb, Drop, rollChest, CHEST_TIERS } from "./src/loot.js";
 import { RARITY_ORDER, rarityColor, rarityName } from "./src/rarity.js";
@@ -56,12 +65,21 @@ import { EffectManager } from "./src/effects.js";
 import { loadSprites } from "./src/animation.js";
 import { sweep, sweepLife } from "./src/pool.js";
 import { SpatialGrid } from "./src/spatial.js";
+import { GUN_IMAGES, prepareGunSprites, updateGunFx, drawGunFx } from "./src/guns.js";
+// --- bản 5.0: chế độ NHẢY DÙ – NHIỆM VỤ – RÚT QUÂN ---
+import { ExtractionWorld } from "./src/extractMap.js";          // bản đồ chiến thuật 3200x2240, 4 khu
+import { HordeManager } from "./src/hordeAI.js";                // zombie tuần tra theo đàn 5–6 con
+import { Stash, ITEM_IMAGES, ITEM_DEFS, ITEM_ORDER, BAG_KEYS, BAG_SLOTS, drawItemIcon } from "./src/stash.js";   // Kho Đồ vĩnh viễn + Túi Chiến Thuật
+import { ExtractionRun, EXTRACT_IMAGES, EXTRACT } from "./src/extraction.js";   // vòng đời 1 ván rút quân (+ missions.js, deploy.js)
 
 // =====================================================================================
 // 1. CẤU HÌNH
 // =====================================================================================
 const W = 480;                 // độ phân giải pixel của khung hình (phóng to cho vừa cửa sổ)
 const H = 270;
+
+/** Kích thước đấu trường Chế độ Giải Trí (chế độ Rút Quân dùng bản đồ 3200x2240 trong src/extractMap.js) */
+const ARCADE_WORLD = { w: 2400, h: 1600 };
 
 /** Trạng thái chính của game. (Tạm dừng / chọn thẻ là cờ bên trong PLAYING.) */
 const GAME_STATE = Object.freeze({
@@ -187,6 +205,10 @@ for (const ch of CHARACTERS) {
 // Spritesheet hiệu ứng & nhân vật/quái — đường dẫn khai báo trong fx-config.js
 for (const [name, cfg] of Object.entries(EFFECTS)) if (cfg.src) IMAGE_MANIFEST[`fx:${name}`] = cfg.src;
 for (const [name, cfg] of Object.entries(ACTORS)) if (cfg.src) IMAGE_MANIFEST[`actor:${name}`] = cfg.src;
+// Ảnh súng Pixel Armory (đường dẫn khai báo trong src/guns.js -> GUN_IMAGES)
+Object.assign(IMAGE_MANIFEST, GUN_IMAGES);
+// Ảnh chế độ Rút Quân (máy bay, dù, trực thăng, hòm đồ, pháo sáng...) & icon vật phẩm — để "" thì game tự vẽ
+Object.assign(IMAGE_MANIFEST, EXTRACT_IMAGES, ITEM_IMAGES);
 
 const SOUND_MANIFEST = {
   // >>> CHÈN FILE ÂM THANH (.mp3 / .wav / .ogg)
@@ -430,6 +452,24 @@ class SoundManager {
       shrine:      { type: "triangle", f0: 523,  f1: 2093, dur: 0.60, vol: 0.20 },
       event:       { type: "sawtooth", f0: 300,  f1: 150,  dur: 0.50, vol: 0.16 },
       grab:        { type: "sawtooth", f0: 90,   f1: 60,   dur: 0.35, vol: 0.18, noise: true },
+      // --- bản 5.0: Nhảy Dù Rút Quân ---
+      zombieHowl:  { type: "sawtooth", f0: 140,  f1: 420,  dur: 0.70, vol: 0.20, noise: true },
+      zombieGroan: { type: "sawtooth", f0: 95,   f1: 70,   dur: 0.45, vol: 0.12 },
+      planeEngine: { type: "sawtooth", f0: 70,   f1: 64,   dur: 1.20, vol: 0.16, noise: true },
+      heliRotor:   { type: "square",   f0: 48,   f1: 44,   dur: 0.30, vol: 0.14, noise: true },
+      flare:       { type: "sawtooth", f0: 900,  f1: 300,  dur: 0.60, vol: 0.16, noise: true },
+      missionDone: { type: "triangle", f0: 523,  f1: 2093, dur: 0.80, vol: 0.24 },
+      capture:     { type: "square",   f0: 660,  f1: 880,  dur: 0.06, vol: 0.06 },
+      reload:      { type: "square",   f0: 420,  f1: 900,  dur: 0.10, vol: 0.10 },
+      gunEmpty:    { type: "square",   f0: 1300, f1: 1200, dur: 0.04, vol: 0.08 },
+      pistol:      { type: "square",   f0: 760,  f1: 160,  dur: 0.08, vol: 0.14, noise: true },
+      rifle:       { type: "sawtooth", f0: 520,  f1: 90,   dur: 0.10, vol: 0.16, noise: true },
+      heavy:       { type: "sawtooth", f0: 260,  f1: 40,   dur: 0.22, vol: 0.22, noise: true },
+      energyGun:   { type: "sine",     f0: 1600, f1: 500,  dur: 0.12, vol: 0.12 },
+      parachute:   { type: "triangle", f0: 300,  f1: 180,  dur: 0.35, vol: 0.14, noise: true },
+      land:        { type: "sawtooth", f0: 160,  f1: 30,   dur: 0.45, vol: 0.26, noise: true },
+      search:      { type: "square",   f0: 300,  f1: 520,  dur: 0.12, vol: 0.08 },
+      useItem:     { type: "triangle", f0: 600,  f1: 1400, dur: 0.20, vol: 0.14 },
     };
     const p = presets[name];
     if (!p) return;
@@ -856,6 +896,7 @@ class Player {
     if (this.blessing && (this.blessing.t -= dt) <= 0) this.endBlessing(game);
     this.updateArmor(dt);
     this.energy = Math.min(this.maxEnergy, this.energy + ENERGY.regen * dt);
+    for (const w of this.weapons) if (w) tickReload(w, dt, game);   // súng thật: đếm thời gian nạp đạn (cả khẩu đang cất)
     this.noEnergyT = Math.max(0, this.noEnergyT - dt);
     if (this.rageTime > 0) { this.rageTime -= dt; if (this.rageTime <= 0) { this.rageTime = 0; this.aura?.stop(); } }
 
@@ -1018,7 +1059,7 @@ class Player {
   /** Bắt đầu vung vũ khí cận chiến (gọi từ meleeSwing trong weapons.js) */
   startSwing(w, fin = false) {
     this.swingDir = -this.swingDir;
-    const big = fin || w.type === "sword" || w.type === "scythe" || w.type === "hammer" || w.type === "dragon";
+    const big = fin || w.type === "sword" || w.type === "scythe" || w.type === "hammer" || w.type === "dragon" || (w.type === "blade" && (w.arc ?? 0) >= 1.3);
     const arc = big ? Math.min(1.7, (w.arc ?? 1.2) + 0.3) : 0.45;   // găng tay: đấm thẳng + lắc nhẹ
     this.swing = { t: 0, dur: Math.min(WEAPON_CFG.swingTime, w.fireRate * 0.6), from: -arc * this.swingDir, to: arc * 0.85 * this.swingDir };
   }
@@ -1168,7 +1209,12 @@ class Player {
 
   attack(game) {
     const w = this.weapon;
+    // súng thật (Pixel Armory): hết băng thì tự nạp đạn, không bắn được trong lúc nạp
+    if (!tryConsumeAmmo(w, game)) { this.fireTimer = Math.max(this.fireTimer, 0.12); return; }
     if (!this.spendEnergy(game, w.cost ?? 0)) return;
+    // TIẾNG ỒN: súng càng to càng vang xa -> chế độ Rút Quân: bầy zombie nghe thấy sẽ kéo tới
+    const nz = weaponNoise(w);
+    if (nz > 0) game.makeNoise(this.x, this.y, nz);
     const rateMul = this.rateMul(w);
     this.fireTimer = w.fireRate * rateMul;
     if (isMelee(w)) {
@@ -1208,6 +1254,8 @@ class Player {
     if (!this.spendEnergy(game, (w.chargeCost ?? w.cost ?? 0) * (0.4 + 0.6 * k))) return;
     this.fireTimer = w.fireRate * this.rateMul(w);
     fireCharged(this, game, w, k);
+    const nz = weaponNoise(w);
+    if (nz > 0) game.makeNoise(this.x, this.y, nz * (0.6 + 0.6 * k));
     if (this.recoil > 0) this.recoilRot = Math.min(0.4, this.recoilRot + this.recoil * WEAPON_CFG.climb);
   }
 
@@ -1428,6 +1476,20 @@ class Game {
     this.vignette = makeVignette(W, H);
     this.lightList = []; this.lightPool = [];
     this.ambient = null;
+    // >>> CHẾ ĐỘ CHƠI: "extract" = NHẢY DÙ – NHIỆM VỤ – RÚT QUÂN (chính) · "arcade" = CHẾ ĐỘ GIẢI TRÍ (sinh tồn theo đợt như cũ)
+    this.mode = loadPref("pixelArena.mode", "extract") === "arcade" ? "arcade" : "extract";
+    this.stash = new Stash();   // Kho Đồ vĩnh viễn + kế hoạch Túi Chiến Thuật (localStorage)
+    this.horde = null;          // HordeManager (chỉ có ở chế độ Rút Quân)
+    this.run = null;            // ExtractionRun — ván rút quân đang chơi
+  }
+
+  /** Đang chơi bằng cảm ứng (để HUD hiện đúng tên nút) */
+  get touchMode() { return TOUCH; }
+  /** Vẽ icon vật phẩm (dùng cho nút cảm ứng Túi Chiến Thuật) */
+  drawItemIcon(g, id, x, y, size) { drawItemIcon(g, id, x, y, size, this.assets.images); }
+  setMode(mode) {
+    this.mode = mode === "arcade" ? "arcade" : "extract";
+    savePref("pixelArena.mode", this.mode);
   }
 
   get diff() { return DIFFICULTY[this.diffIndex]; }
@@ -1442,6 +1504,7 @@ class Game {
 
   // ---------------- Chuyển trạng thái ----------------
   start(charIndex = this.charIndex) {
+    if (this.mode === "extract") return this.startExtraction(charIndex);
     this.charIndex = charIndex;
     savePref("pixelArena.char", String(charIndex));
     this.reset(CHARACTERS[charIndex], BIOMES[this.mapIndex]);
@@ -1458,7 +1521,75 @@ class Game {
     canvas.focus();
   }
 
+  /**
+   * XUẤT KÍCH (chế độ Rút Quân): lấy đồ trong Túi Chiến Thuật ra khỏi Kho, sinh bản đồ + bầy zombie + nhiệm vụ,
+   * mở BẢN ĐỒ CHIẾN THUẬT để chọn điểm nhảy dù (src/deploy.js).
+   */
+  startExtraction(charIndex = this.charIndex) {
+    this.charIndex = charIndex;
+    savePref("pixelArena.char", String(charIndex));
+    drawLoading(0.5, "Đang dựng vùng dịch Z-07...");
+    const kit = this.stash.checkout();
+    this.reset(CHARACTERS[charIndex], null, { extract: true, kit });
+    this.state = GAME_STATE.PLAYING;
+    this.ui.closePanels?.();
+    this.paused = false;
+    input.mouse.left = false;
+    input.pressed.clear();
+    this.ui.hideAll();
+    stage.classList.remove("in-game");   // bản đồ chiến thuật: hiện chuột để chọn điểm nhảy
+    this.sound.unlock();
+    goFullscreenLandscape();
+    this.sound.play("uiStart", 0.6);
+    this.sound.setMusic("menuMusic");
+    canvas.focus();
+  }
+
+  /** Thoát từ bản đồ chiến thuật (chưa nhảy dù): trả nguyên đồ mang theo về Kho */
+  abortExtraction() { this.refundKit(); this.goMenu(); }
+  refundKit() {
+    const run = this.run;
+    if (run && run.phase === "tacmap") {
+      for (const s of run.bag) if (s) this.stash.add(s.id, s.n);
+      if (run.kitWeapon) this.stash.weapons.push(run.kitWeapon);
+      this.stash.stats.runs = Math.max(0, this.stash.stats.runs - 1);
+      this.stash.save();
+      run.phase = "done";
+    }
+  }
+
+  /** RÚT QUÂN THÀNH CÔNG (gọi từ ExtractionRun.success) -> bảng tổng kết */
+  endExtraction(result) {
+    this.state = GAME_STATE.GAME_OVER;
+    this.overTimer = 0.4;
+    this.overShown = false;
+    this.best = Math.max(this.best, this.score);
+    savePref("pixelArena.best", String(this.best));
+    this.gemsEarned = result.gems;
+    this.sound.play("levelUp", 0.7);
+    this.sound.setMusic("");
+    input.mouse.left = false;
+  }
+
+  /** Zombie Đột Biến Khổng Lồ xuất hiện (chế độ Rút Quân, theo lịch EXTRACT.bossAt) */
+  spawnZombieBoss() {
+    const p = this.player;
+    const pt = this.world.randomFreePoint({ near: { x: p.x, y: p.y }, minD: 190, maxD: 280, margin: 30 }) ?? this.world.randomFreePoint({ margin: 30 });
+    if (!pt) return;
+    this.bossCount++;
+    this.queueSpawn("zBoss", pt.x, pt.y, { hpMul: this.diff.hp * (1 + (this.bossCount - 1) * 0.35), dmgBonus: this.diffIndex === 2 ? 1 : 0, speedMul: 1 }, SPAWN.bossTelegraph, { boss: true });
+    this.banner("ZOMBIE ĐỘT BIẾN KHỔNG LỒ XUẤT HIỆN!", "#7cff5a", true, 3.2);
+    this.sound.play("bossWarn", 0.8);
+    this.sound.play("zombieHowl", 0.7);
+    this.shake(0.5, 4);
+  }
+
   goMenu() {
+    // rời trận Rút Quân giữa chừng = coi như tử trận (mất đồ mang theo)
+    if (this.run && this.run.phase !== "done") {
+      if (this.run.phase === "tacmap") this.refundKit();
+      else { this.run.fail("abandon"); this.stash.normalizeBag(); }
+    }
     this.state = GAME_STATE.MENU;
     this.paused = false;
     this.choosing = false;
@@ -1481,8 +1612,13 @@ class Game {
     this.bestByChar[id] = Math.max(this.bestByChar[id] ?? 0, this.score);
     savePref("pixelArena.bestByChar", JSON.stringify(this.bestByChar));
     // >>> NGỌC: phần thưởng vĩnh viễn dùng ở Sảnh chờ
-    this.gemsEarned = gemsForRun({ score: this.score, bossKills: this.bossKills, wave: this.wave, kills: this.kills });
-    this.progress.addGems(this.gemsEarned);
+    if (this.run) {   // Rút Quân: TỬ TRẬN -> mất toàn bộ đồ mang theo trong ván (ExtractionRun.fail)
+      this.run.fail("dead");
+      this.gemsEarned = this.run.result.gems;
+    } else {
+      this.gemsEarned = gemsForRun({ score: this.score, bossKills: this.bossKills, wave: this.wave, kills: this.kills });
+      this.progress.addGems(this.gemsEarned);
+    }
     this.shopping = null; this.ui.hideShop?.();
     this.sound.play("gameOver", 0.7);
     this.sound.setMusic("");
@@ -1491,7 +1627,9 @@ class Game {
     input.mouse.left = false;
   }
 
-  reset(char, biome) {
+  /** opts: { extract: true, kit } -> ván Rút Quân (bản đồ chiến thuật + zombie + nhiệm vụ) */
+  reset(char, biome, opts = {}) {
+    const extract = !!opts.extract;
     effects.clear();
     // trả đạn / quái / ngọc của trận trước về Object Pool
     for (const b of this.bullets) Bullet.pool.release(b);
@@ -1499,11 +1637,18 @@ class Game {
     for (const e of this.enemies) Enemy.pool.release(e);
     for (const o of this.orbs) ExpOrb.pool.release(o);
     for (const d of this.drops) Drop.pool.release(d);
-    this.world = new World(biome, this.assets.images);
+    if (extract) this.world = new ExtractionWorld(this.assets.images);   // tự đổi WORLD thành 3200x2240
+    else { Object.assign(WORLD, ARCADE_WORLD); this.world = new World(biome, this.assets.images); }
+    // lưới va chạm theo kích thước bản đồ hiện tại
+    if (this.grid.cols !== Math.ceil(WORLD.w / GRID_CELL) || this.grid.rows !== Math.ceil(WORLD.h / GRID_CELL)) this.grid = new SpatialGrid(WORLD.w, WORLD.h, GRID_CELL);
+    HUD.MINIMAP.h = Math.round(HUD.MINIMAP.w * WORLD.h / WORLD.w);
     this.minimap = this.world.renderMinimap(HUD.MINIMAP.w, HUD.MINIMAP.h);
     // nâng cấp vĩnh viễn từ Sảnh chờ + vũ khí phụ đã chọn ở Kho Vũ Khí
     const pr = this.progress, sec = pr.secondary && pr.isUnlocked(pr.secondary) ? WEAPONS[pr.secondary] : null;
     this.player = new Player(char, this.world.spawn, { hp: pr.level(char.id, "hp"), armor: pr.level(char.id, "armor"), cd: pr.level(char.id, "cd"), weapon: pr.level(char.id, "weapon"), secondary: sec });
+    if (this.player.weapons[1]) this.player.weapons[1].crafted = true;   // vũ khí chế tạo bằng Ngọc: vĩnh viễn, không mang về Kho Đồ
+    const kitW = extract && opts.kit?.weapon && WEAPONS[opts.kit.weapon.id];
+    if (kitW) this.player.weapons[1] = makeWeapon(kitW, opts.kit.weapon.lvl ?? 1);   // súng mang từ Kho Đồ (mất nếu tử trận)
     this.camera = new Camera(W, H);
     this.camera.snap(this.player.x, this.player.cy);
     this.bullets = []; this.enemyBullets = []; this.enemies = [];
@@ -1528,7 +1673,14 @@ class Game {
     this.hurtFlash = 0;
     this.flashFx = null;
     this.reviveUsed = false;
-    this.ambient = new Ambient(biome.weather);
+    this.ambient = new Ambient(this.world.biome.weather);
+    this.mode = extract ? "extract" : "arcade";
+    this.horde = extract ? new HordeManager(this) : null;
+    this.run = null;
+    if (extract) {
+      this.run = new ExtractionRun(this, { minutes: this.stash.duration, kit: opts.kit ?? { slots: [], weapon: null }, stash: this.stash, progress: this.progress });
+      return;
+    }
     this.banner(`ĐỢT 1 · ${biome.name}`, "#ffe26b", true, 2.6);
     this.banner(`Độ khó: ${this.diff.name}`, this.diff.color, false, 2.6);
   }
@@ -1545,6 +1697,8 @@ class Game {
     if (!this.flashFx || time >= this.flashFx.t) this.flashFx = { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255, t: time, max: time };
   }
   hitStop(t) { this.freeze = Math.max(this.freeze, t); }
+  /** Tiếng ồn (súng nổ, vụ nổ) — chế độ Rút Quân: bầy zombie trong bán kính sẽ nghe thấy và kéo tới */
+  makeNoise(x, y, radius) { if (radius > 0) this.horde?.noise(x, y, radius); }
   get boss() { for (const e of this.enemies) if (e.boss && !e.dead) return e; return null; }
 
   /**
@@ -1754,6 +1908,7 @@ class Game {
    */
   damageEnemy(e, dmg, angle, knock, opts = {}) {
     if (e.dead) return false;
+    this.horde?.onEnemyHurt(e);   // zombie bị bắn mà đàn chưa phát hiện -> cả đàn hú lên lao tới
     const p = this.player;
     // CHÍ MẠNG: x2 sát thương (tỉ lệ gốc của nhân vật + thẻ Mắt Đại Bàng + vũ khí)
     let crit = false;
@@ -1788,6 +1943,12 @@ class Game {
   killEnemy(e, opts = {}) {
     if (e.dead) return;
     e.dead = true;
+    this.horde?.onEnemyKilled(e);
+    // Zombie Phun Độc (Bloater): chết thì NỔ TUNG túi độc
+    if (e.cfg.deathBlast) {
+      const b = e.cfg.deathBlast;
+      this.explode(e.x, e.cy, { radius: b.radius, damage: b.damage, knock: 220, source: "bloater", hurtPlayer: true, playerRadius: b.radius * 0.8, playerDamage: b.playerDamage });
+    }
     if (e.boss) { FX.darkExplosion(e.cx, e.y + 6, 0.75); this.shake(0.6, 6); this.screenFlash("#ffffff", 0.3); this.hitStop(0.14); }
     else if (e.freezeT > 0) effects.play("iceShatter", e.cx, e.y, { aim: 0, scale: 0.5 * Math.min(1.6, e.cfg.scale ?? 1) });   // tượng băng vỡ vụn
     else FX.death(e.cx, e.cy, Math.min(1.6, e.cfg.scale ?? 1));
@@ -1844,7 +2005,7 @@ class Game {
       if (ch) ch.boss = true;   // rương Boss: vũ khí Sử Thi trở lên (có thể ra Thần Thoại)
       for (let i = 0; i < 8; i++) this.drops.push(Drop.obtain(e.x, e.y - 8, "gold", GOLD.boss / 8));
       for (let i = 0; i < 4; i++) this.drops.push(Drop.obtain(e.x, e.y - 8, "energy", ENERGY.orbValue * 2));
-      this.merchantT = 2.2;     // Thương Nhân Bí Ẩn hiện ra ngay sau đó
+      if (this.mode === "arcade") this.merchantT = 2.2;     // Thương Nhân Bí Ẩn hiện ra ngay sau đó (Chế độ Giải Trí)
       for (const o of this.orbs) o.magnet = true;
       p.armor = p.maxArmor; p.armorFlash = 0.5;
       this.healPlayer(1);
@@ -1868,8 +2029,10 @@ class Game {
     if (src === "grenade" || src === "cannon") FX.plasma(x, y);
     else if (src === "void") FX.darkExplosion(x, y + 6, 0.45);
     else if (src === "meteor") { /* hình thiên thạch đã phát từ lúc gọi (addStrike) */ }
+    else if (src === "bloater") { FX.acidSplash(x, y + 6, 0.6); FX.explosion(x, y + 8, 0.5); }
     else FX.explosion(x, y + 8, src === "bat" ? 0.45 : src === "rocket" ? 0.55 : 0.8);
-    const col = src === "grenade" ? "#7cffb0" : src === "cannon" ? "#5ef0ff" : src === "void" ? "#b05aff" : "#ffb03a";
+    const col = src === "grenade" ? "#7cffb0" : src === "cannon" ? "#5ef0ff" : src === "void" ? "#b05aff" : src === "bloater" ? "#8aff4a" : "#ffb03a";
+    this.makeNoise(x, y, src === "bat" || src === "bloater" ? 220 : 460);   // tiếng nổ kéo zombie tới
     this.shocks.push({ x, y, r: o.radius, life: 0.35, max: 0.35, color: col });
     const big = src === "barrel" || src === "meteor" || src === "void";
     const P = this.player;
@@ -2262,7 +2425,7 @@ class Game {
 
   // ---------- UPDATE ----------
   update(dt) {
-    this.touch?.sync(this, TOUCH && this.state === GAME_STATE.PLAYING);
+    this.touch?.sync(this, TOUCH && this.state === GAME_STATE.PLAYING && (!this.run || this.run.playing));
     if (input.pressed.has("m")) this.ui.toggleMute();
     if (input.pressed.has("h")) this.debug = !this.debug;
     if (input.pressed.has("l") && this.state === GAME_STATE.PLAYING) { this.light.enabled = !this.light.enabled; this.banner(this.light.enabled ? "Ánh sáng: BẬT" : "Ánh sáng: TẮT (nhẹ máy hơn)", "#b8b0d0"); }
@@ -2278,7 +2441,7 @@ class Game {
     this.updateFx(dt);
     if (!this.overShown) {
       this.overTimer -= dt;
-      if (this.overTimer <= 0) { this.overShown = true; this.ui.showGameOver(); }
+      if (this.overTimer <= 0) { this.overShown = true; if (this.run?.result) this.ui.showExtractResult(this.run.result); else this.ui.showGameOver(); }
       return;
     }
     if (input.pressed.has("enter") || input.pressed.has("r")) this.start(this.charIndex);
@@ -2300,6 +2463,8 @@ class Game {
       if (input.pressed.has("escape") || input.pressed.has("e")) this.closeShop();
       return;
     }
+    // Rút Quân: bản đồ chiến thuật / đang thả dù
+    if (this.run && (this.run.phase === "tacmap" || this.run.phase === "airdrop")) return this.updateDeploy(dt);
     if (input.pressed.has("p") || input.pressed.has("escape")) this.paused = !this.paused;
     if (this.debug && input.pressed.has("j")) this.spawnHorde(50);   // thử tải: +50 quái
     if (TOUCH && isPortrait()) this.paused = true;   // cầm dọc điện thoại: tự tạm dừng, chờ xoay ngang
@@ -2318,6 +2483,19 @@ class Game {
     p.update(dt, this);
     if (this.comboT > 0 && (this.comboT -= dt) <= 0) this.combo = 0;
 
+    if (this.mode === "arcade") this.updateArcadeSpawns(dt, p);
+    this.updatePending(dt);
+
+    // Rút Quân: não bộ các đàn zombie chạy TRƯỚC khi cập nhật từng con
+    this.horde?.update(dt);
+    // VIEWPORT CULLING: zombie đi tuần ở xa camera chỉ cập nhật rẻ (không va chạm / hoạt ảnh), quái gần cập nhật đầy đủ
+    const H = this.horde;
+    for (const e of this.enemies) { if (H && !H.shouldUpdate(e)) H.cheapUpdate(e, dt); else e.update(dt, this); }
+    this.afterEnemies(dt, p);
+  }
+
+  /** CHẾ ĐỘ GIẢI TRÍ: sinh quái lẻ quanh người chơi, rương, đợt + Boss, sự kiện, Thương Nhân (logic cũ, giữ nguyên) */
+  updateArcadeSpawns(dt, p) {
     // --- Sinh quái: nhanh dần theo thời gian, đông dần theo đợt; khi có Boss thì thưa hơn ---
     const boss = this.boss;
     this.spawnTimer -= dt;
@@ -2345,11 +2523,13 @@ class Game {
       } else this.bossTimer = 5;
     }
     this.updateEvent(dt);
-    this.updatePending(dt);
     // Thương Nhân Bí Ẩn xuất hiện sau khi hạ Boss
     if (this.merchantT > 0 && (this.merchantT -= dt) <= 0) this.spawnMerchant();
+  }
 
-    for (const e of this.enemies) e.update(dt, this);
+  /** Phần chung của 2 chế độ sau khi quái đã di chuyển: va chạm, vật phẩm, hiệu ứng, camera */
+  afterEnemies(dt, p) {
+    const world = this.world;
     // quái đã di chuyển -> xếp lại lưới không gian, rồi tản đội hình
     this.grid.rebuild(this.enemies);
     this.separateEnemies(dt);
@@ -2393,6 +2573,12 @@ class Game {
     this.updateStrikes(dt);
     this.updateRains(dt);
     this.updateMinions(dt);
+    // Rút Quân: đồng hồ, nhiệm vụ, hòm đồ, mìn, lựu đạn, pháo sáng, trực thăng, vùng độc
+    if (this.run) {
+      this.run.update(dt);
+      for (let i = 0; i < BAG_SLOTS; i++) if (BAG_KEYS[i].some((k) => input.pressed.has(k))) this.run.useSlot(i);   // Túi Chiến Thuật Z X C V / 3 4 5 6
+    }
+    if (input.pressed.has("r")) startReload(p.weapon, this);   // nạp đạn tay (súng thật)
 
     // --- Rương, vật phẩm, ngọc EXP ---
     for (const c of this.chests) { c.update(dt); if (!c.opened && circleHit(p.x, p.y - 6, p.radius, c.x, c.y - 6, c.radius)) this.openChest(c); }
@@ -2409,6 +2595,7 @@ class Game {
     for (const o of this.orbs) o.update(dt, this);
     for (const d of this.drops) d.update(dt, this);
     this.updateShells(dt);
+    updateGunFx(dt);
     for (const n of this.npcs) n.update(dt);
     sweep(this.npcs);
     // --- Tương tác (E): nhặt vũ khí, mở quầy Thương Nhân, cầu phúc Tượng Thần · GHÉP vũ khí (G) ---
@@ -2444,6 +2631,31 @@ class Game {
     }
   }
 
+  // ---------- RÚT QUÂN: BẢN ĐỒ CHIẾN THUẬT & THẢ DÙ ----------
+  updateDeploy(dt) {
+    const run = this.run, p = this.player;
+    this.camera.updateShake(dt);
+    this.updateFx(dt);
+    if (this.flashFx && (this.flashFx.t -= dt) <= 0) this.flashFx = null;
+    if (run.phase === "tacmap") {
+      const r = AUTOPLAY ? "jump" : run.tacmap.update(dt, input);
+      if (r === "jump") { run.beginAirdrop(run.tacmap.chosen); stage.classList.add("in-game"); this.sound.play("uiStart", 0.5); }
+      else if (r === "back") this.abortExtraction();
+      return;
+    }
+    // đang thả dù: thế giới vẫn sống (đuốc, mây...), zombie đứng chờ
+    this.time += dt;
+    this.world.update(dt);
+    this.ambient?.update(dt, this.camera);
+    for (const list of [this.shocks, this.banners]) for (const b of list) b.life -= dt;
+    sweepLife(this.shocks); sweepLife(this.banners);
+    this.grid.rebuild(this.enemies);
+    const ev = run.airdrop.update(dt);
+    if (ev === "landed") { this.grid.rebuild(this.enemies); }
+    if (ev === "done") run.landed();
+    void p;
+  }
+
   // ---------- TƯƠNG TÁC (E) ----------
   /** Vật gần nhất có thể tương tác: { kind: "weapon" | "merchant" | "statue", ref } */
   findInteract() {
@@ -2460,6 +2672,9 @@ class Game {
       const d = (n.x - p.x) ** 2 + (n.y - p.y) ** 2;
       if (d < 34 * 34 && d < bd + 400) { bd = d; best = { kind: n.kind, ref: n }; }
     }
+    // Rút Quân: hòm tiếp tế / túi y tế, giải cứu, trạm phát sóng, gọi trực thăng (ưu tiên khi không có vũ khí ngay chân)
+    const r = this.run?.findInteract(p);
+    if (r && (!best || r.kind === "extract" || bd > 14 * 14)) best = r;
     return best;
   }
   interact(t) {
@@ -2471,6 +2686,7 @@ class Game {
       this.sound.play("pickup", 0.6);
     } else if (t.kind === "merchant") this.openShop(t.ref);
     else if (t.kind === "statue") this.pray(t.ref);
+    else this.run?.interact(t);
   }
 
   /** Thương Nhân Bí Ẩn hiện ra cạnh người chơi */
@@ -2653,6 +2869,7 @@ class Game {
     for (const m of this.minions) this.addLight(m.x, m.y, 30, "#45f0b0", 0.8, 0.25);
     for (const s of this.pending) if (cam.inView(s.x, s.y, 40)) this.addLight(s.x, s.y - 4, s.big ? 50 : 30, s.color, 0.8, 0.3);   // vòng ngắm đỏ luôn sáng rõ
     for (const n of this.npcs) this.addLight(n.x, n.y - 14, n.kind === "merchant" ? 56 : 64, n.kind === "merchant" ? "#ffb04a" : "#ffe26b", 1, 0.2);
+    this.run?.lights(this.lightAdder ??= (x, y, r, col, a, glow) => this.addLight(x, y, r, col, a, glow), cam);
     if (p.charge && this.state === GAME_STATE.PLAYING) this.addLight(p.x, p.cy, 40 + 40 * p.chargeK, p.weapon.color, 0.6 + 0.4 * p.chargeK, 0.3);
     for (const b of this.beams) this.addLight((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2, 60, b.color, b.life / b.max, 0.2);
     for (const b of this.bolts) { const q = b.pts[b.pts.length - 1]; this.addLight(q[0], q[1], 50, b.color, b.life / b.max, 0.3); }
@@ -2675,7 +2892,10 @@ class Game {
   draw() {
     if (this.state === GAME_STATE.MENU) { this.lobby?.draw(ctx, { touch: TOUCH }); effects.draw(ctx, null, 0); effects.draw(ctx, null, 1); return; }
     if (!this.player) return;
-    const alive = this.state === GAME_STATE.PLAYING;
+    const run = this.run;
+    if (run?.phase === "tacmap" && this.state === GAME_STATE.PLAYING) { run.tacmap.draw(ctx, W, H); return; }   // BẢN ĐỒ CHIẾN THUẬT
+    const drop = run?.phase === "airdrop" ? run.airdrop : null;
+    const alive = this.state === GAME_STATE.PLAYING && !(run && run.boarded);
     const cam = this.camera, cx = cam.rx, cy = cam.ry;
 
     // Nền tĩnh (cắt theo camera)
@@ -2686,7 +2906,9 @@ class Game {
     ctx.save();
     ctx.translate(-cx, -cy);
     this.world.drawDynamic(ctx, cam);
+    drop?.drawGround(ctx);                         // bóng máy bay + bóng người đang rơi
     this.drawZones();
+    run?.drawGround(ctx);                          // bãi rút quân, hòm tiếp tế, mìn, vùng nhiệm vụ
     this.drawStrikes();
     this.drawSpawnMarks();
     this.drawShells();
@@ -2702,7 +2924,8 @@ class Game {
     actors.length = 0;
     for (const e of this.enemies) if (!e.dead && cam.inView(e.x, e.y, 120)) actors.push(e);
     for (const n of this.npcs) if (cam.inView(n.x, n.y, 60)) actors.push(n);
-    if (alive) actors.push(this.player);
+    run?.collectActors(actors);                    // người sống sót, kén ổ dịch, trạm phát sóng, cờ cứ điểm
+    if (alive && (!drop || drop.landed)) actors.push(this.player);
     actors.sort(byFeetY);
     for (const a of actors) a.draw(ctx, this);     // spritesheet theo frame hoạt ảnh (+ vũ khí của người chơi)
     ctx.restore();
@@ -2714,16 +2937,19 @@ class Game {
     // ---- LỚP 2 (phát sáng, luôn rõ): đạn, tia, nổ, số sát thương, thời tiết ----
     ctx.save();
     ctx.translate(-cx, -cy);
-    for (const a of actors) if (a !== this.player) a.drawOverlay(ctx, this);
+    for (const a of actors) if (a !== this.player) a.drawOverlay?.(ctx, this);
     if (alive) this.drawChargeRing();
     this.drawMinions();
     for (const b of this.bullets) if (cam.inView(b.x, b.y, 16)) b.draw(ctx, this);
     for (const b of this.enemyBullets) if (cam.inView(b.x, b.y, 16)) b.draw(ctx);
     this.drawRains();
+    this.horde?.drawOverlay(ctx);                  // dấu "!" khi cả đàn zombie hú lên
+    run?.drawOverlay(ctx);                         // lựu đạn, khói pháo sáng, trực thăng, thanh tiến độ nhiệm vụ
     this.drawBeams();
     HUD.drawShockwaves(ctx, this.shocks);
     this.drawParticles();
     effects.draw(ctx, cam, 1);                     // tia lửa, vệt chém, trúng đòn, nổ... (spritesheet)
+    drawGunFx(ctx);                                // lửa đầu nòng / vỏ đạn dạng sprite của súng Pixel Armory
     const P = this.player;                         // con mèo trên đầu lúc Ngại Ngùng: vẽ đè lên hiệu ứng cho dễ thấy
     if (alive && P.shy) drawCat(ctx, P.x + (P.facingLeft ? -1 : 1), P.y - 33, P.facingLeft, P.shy.t);
     for (const f of this.flashes) {    // chớp sáng đầu nòng
@@ -2733,6 +2959,7 @@ class Game {
       ctx.fillRect(Math.round(f.x - f.size), Math.round(f.y - f.size), f.size * 2, f.size * 2);
     }
     this.ambient?.draw(ctx);
+    drop?.drawSky(ctx);                            // người + dù đang rơi, máy bay bay ngang
     this.drawPickupLabels();
     if (this.debug) this.drawDebug();
     ctx.restore();
@@ -2743,11 +2970,11 @@ class Game {
     const F = this.flashFx;
     if (F) { ctx.fillStyle = `rgba(${F.r},${F.g},${F.b},${(F.t / F.max) * 0.45})`; ctx.fillRect(0, 0, W, H); }
     if (this.player.inAcid) { ctx.fillStyle = "rgba(60,200,40,0.10)"; ctx.fillRect(0, 0, W, H); }
-    if (alive && this.player.hp === 1 && this.player.armor === 0) {   // sắp chết: viền đỏ nhịp tim
+    if (alive && this.player.hp <= Math.max(1, this.player.maxHp * 0.2) && this.player.armor === 0) {   // sắp chết (≤20% máu): viền đỏ nhịp tim
       ctx.strokeStyle = `rgba(255,30,50,${0.25 + 0.2 * Math.sin(this.time * 8)})`; ctx.lineWidth = 6; ctx.strokeRect(3, 3, W - 6, H - 6);
     }
     this.drawHUD();
-    if (alive && !this.paused && !this.choosing) { if (TOUCH) this.drawAimGuide(); else this.drawCrosshair(); }
+    if (alive && !this.paused && !this.choosing && !drop) { if (TOUCH) this.drawAimGuide(); else this.drawCrosshair(); }
   }
 
   /** Vùng mây độc / vũng axit (dưới chân) */
@@ -2923,7 +3150,8 @@ class Game {
       let txt, x = tgt.ref.x, y = tgt.ref.y;
       if (tgt.kind === "weapon") { const own = p.weapons[1] ? ` (thay ${p.weapon.label})` : ""; txt = `${key} Nhặt${own}`; y -= 16; }
       else if (tgt.kind === "merchant") { txt = `${key} Mua đồ · Vàng ${this.gold}`; y -= 52; }
-      else { const pr = tgt.ref.price; txt = pr === null ? "Tượng Thần đã cạn phép lành" : `${key} Cầu phúc · ${pr} Vàng`; y -= 46; }
+      else if (tgt.kind === "statue") { const pr = tgt.ref.price; txt = pr === null ? "Tượng Thần đã cạn phép lành" : `${key} Cầu phúc · ${pr} Vàng`; y -= 46; }
+      else { txt = tgt.label === "Đang lục soát..." ? tgt.label : `${key} ${tgt.label}`; x = tgt.x; y = tgt.y; }
       const w = Math.ceil(ctx.measureText(txt).width) + 8;
       ctx.fillStyle = "rgba(12,10,20,0.85)"; ctx.fillRect(Math.round(x - w / 2), Math.round(y - 1), w, 10);
       ctx.fillStyle = "#ffe26b"; ctx.fillRect(Math.round(x - w / 2), Math.round(y + 9), w, 1);
@@ -2953,9 +3181,10 @@ class Game {
     const X = 4, Y = 6;
     HUD.panel(ctx, X, Y, 126, 41);
     HUD.drawHeart(ctx, X + 4, Y + 5, true);
-    HUD.drawBar(ctx, X + 14, Y + 4, 80, 9, p.hp / p.maxHp, "#e8343f", "#ff8a92", `${p.hp}/${p.maxHp}`);
+    // >>> 3 thanh hiển thị theo %: Máu · Giáp · Năng Lượng
+    HUD.drawBar(ctx, X + 14, Y + 4, 80, 9, p.hp / p.maxHp, "#e8343f", "#ff8a92", HUD.pct(p.hp, p.maxHp));
     HUD.drawShield(ctx, X + 4, Y + 16);
-    HUD.drawBar(ctx, X + 14, Y + 16, 80, 9, p.maxArmor ? Math.min(1, p.armor / p.maxArmor) : 0, p.armorFlash > 0 ? "#e6f0ff" : "#7fa2d8", "#c4d6f4", `${p.armor}/${p.maxArmor}`);
+    HUD.drawBar(ctx, X + 14, Y + 16, 80, 9, p.maxArmor ? Math.min(1, p.armor / p.maxArmor) : 0, p.armorFlash > 0 ? "#e6f0ff" : "#7fa2d8", "#c4d6f4", HUD.pct(p.armor, p.maxArmor));
     if (p.armor < p.maxArmor && p.sinceHit < p.regen.delay) {
       ctx.fillStyle = "#3d4a66"; ctx.fillRect(X + 14, Y + 26, 80, 1);
       ctx.fillStyle = "#9fb8e0"; ctx.fillRect(X + 14, Y + 26, Math.round(80 * (p.sinceHit / p.regen.delay)), 1);
@@ -2963,7 +3192,7 @@ class Game {
     // NĂNG LƯỢNG (xanh dương) — nháy đỏ khi thiếu
     HUD.drawBolt(ctx, X + 5, Y + 29);
     const eLow = p.noEnergyT > 0 && Math.floor(this.time * 16) % 2 === 0;
-    HUD.drawBar(ctx, X + 14, Y + 29, 80, 8, p.energy / p.maxEnergy, eLow ? "#ff3b3b" : p.energyFlash > 0 ? "#c8f2ff" : "#2f7ae8", "#7cc8ff", `${Math.floor(p.energy)}/${p.maxEnergy}`);
+    HUD.drawBar(ctx, X + 14, Y + 29, 80, 8, p.energy / p.maxEnergy, eLow ? "#ff3b3b" : p.energyFlash > 0 ? "#c8f2ff" : "#2f7ae8", "#7cc8ff", HUD.pct(Math.floor(p.energy), p.maxEnergy));
     this.drawSkillSlot(X + 99, Y + 3, p);
 
     // 2 ô vũ khí (+ năng lượng mỗi phát) + Lướt
@@ -2986,6 +3215,7 @@ class Game {
 
     // Góc trên phải: bộ đếm FPS, rồi Điểm, thời gian, đợt, cấp độ (điện thoại: dời trái nhường chỗ nút tạm dừng)
     drawFps(ctx);
+    if (this.run) { this.drawExtractHUD(); return; }
     ctx.textAlign = "right";
     const RX = TOUCH ? W - 36 : W - 6;
     HUD.text(ctx, `ĐIỂM ${this.score}`, RX, 16, "#ffe26b");
@@ -3019,6 +3249,31 @@ class Game {
       else if (TOUCH) { ctx.fillStyle = "rgba(10,8,18,0.6)"; ctx.fillRect(0, 0, W, H); }   // nút Tiếp tục là HTML
       else { this.overlay("TẠM DỪNG", "P / Esc: tiếp tục", "Q: về Sảnh chờ"); this.drawPerkSummary(); }
     }
+  }
+
+  /** HUD chế độ Rút Quân: đồng hồ, bảng nhiệm vụ, túi chiến thuật (src/extraction.js) + cấp độ, hạ gục, Boss, thông báo */
+  drawExtractHUD() {
+    const run = this.run, p = this.player;
+    if (this.state === GAME_STATE.PLAYING || run.phase === "done") run.drawHUD(ctx, W, H);
+    ctx.font = "7px monospace"; ctx.textAlign = "right"; ctx.textBaseline = "top";
+    const RX = TOUCH ? W - 38 : W - 6, by = 17 + 12 + run.missions.list.length * 15 + 3;
+    HUD.text(ctx, `CẤP ${this.level} · hạ ${this.kills} · ● ${this.gold}`, RX, by, this.goldFlash > 0 ? "#ffffff" : "#b8b0d0");
+    const xp = Math.round(60 * this.exp / this.expNeed);
+    ctx.fillStyle = "#2a2338"; ctx.fillRect(RX - 60, by + 9, 60, 1); ctx.fillStyle = "#3a8bff"; ctx.fillRect(RX - 60, by + 9, xp, 1);
+    if (this.combo >= 3) { ctx.font = "bold 9px monospace"; HUD.text(ctx, `COMBO x${this.combo}`, RX, by + 13, this.combo >= 25 ? "#ff7ad8" : "#ffb030"); }
+    ctx.textAlign = "left"; ctx.font = "8px monospace";
+    const boss = this.boss;
+    if (boss) HUD.drawBossBar(ctx, W, boss, this.time, run.flare && !run.heli ? 62 : 44);
+    HUD.drawMinimap(ctx, W, H, this);
+    HUD.drawOffscreenIndicators(ctx, W, H, this);
+    // thông báo: giữa phía dưới nhân vật (không đè bảng máu / bảng nhiệm vụ), tối đa 4 dòng
+    if (!this.paused) HUD.drawBanners(ctx, W, H, this.banners.slice(-4), 176, 284, true);
+    if (this.paused && this.state === GAME_STATE.PLAYING) {
+      if (TOUCH && isPortrait()) this.overlay("XOAY NGANG", "Xoay ngang điện thoại để chơi tiếp", "");
+      else if (TOUCH) { ctx.fillStyle = "rgba(10,8,18,0.6)"; ctx.fillRect(0, 0, W, H); }
+      else { this.overlay("TẠM DỪNG", "P / Esc: tiếp tục", "Q: rời trận (MẤT đồ mang theo)"); this.drawPerkSummary(); }
+    }
+    void p;
   }
 
   /** Danh sách thẻ đã chọn (màn hình tạm dừng) */
@@ -3170,6 +3425,7 @@ function drawFps(c) {
 const STRESS = Number((location.hash.match(/stress-(\d+)/) ?? [])[1] ?? 0);
 const AUTOPLAY = location.hash.startsWith("#autoplay");
 const GOD = /god/.test(location.hash);
+const EXTRACT_TEST = /extract/.test(location.hash);
 function autoplay(game) {
   const p = game.player, cam = game.camera;
   if (GOD) { p.hp = p.maxHp; }
@@ -3177,10 +3433,20 @@ function autoplay(game) {
   for (const e of game.enemies) { if (e.dead) continue; const d = Math.hypot(e.cx - p.cx, e.cy - p.cy); if (d < bd) { bd = d; best = e; } }
   // mục tiêu di chuyển: rương -> tim / ngọc gần -> đền thờ -> đi lòng vòng
   let goal = game.chests[0] ?? null;
+  const run = game.run;
+  if (run?.playing) {   // Rút Quân: tới nhiệm vụ gần nhất, xong thì tới bãi đáp
+    goal = null;
+    if (run.padOpen && run.pad && (run.missions.doneCount >= run.missions.list.length || run.flare || run.timeLeft < 60 || run.missions.doneCount >= 1)) goal = run.pad;
+    else { let bd2 = Infinity; for (const m of run.missions.active) { const d2 = (m.x - p.x) ** 2 + (m.y - p.y) ** 2; if (d2 < bd2) { bd2 = d2; goal = m.type === "rescue" ? m.survivor : m; } } }
+    const it = game.interactTarget;
+    if (it && ["loot", "rescue", "download", "extract"].includes(it.kind)) input.pressed.add("e");
+    if (p.hp < p.maxHp * 0.5) { const i = run.bag.findIndex((s) => s?.id === "medkit"); if (i >= 0) run.useSlot(i); }
+  }
   if (!goal) for (const pk of game.pickups) if (!pk.blockedUntilLeave && !(pk.kind === "heart" && p.hp >= p.maxHp)) { goal = pk; break; }
   if (!goal) { let od = 260 * 260; for (const o of game.orbs) { const d2 = (o.x - p.x) ** 2 + (o.y - p.y) ** 2; if (d2 < od) { od = d2; goal = o; } } }
   if (!goal) goal = game.world.shrines.find((s) => s.cool <= 0) ?? null;
   for (const k of ["w", "a", "s", "d"]) input.keys.delete(k);
+  if (goal && run?.playing && (goal.x - p.x) ** 2 + (goal.y - p.y) ** 2 < 16 * 16) goal = null;
   let tx = goal ? goal.x : p.x + (Math.floor(game.time / 3) % 2 ? 80 : -80), ty = goal ? goal.y : p.y + (Math.floor(game.time / 5) % 2 ? 40 : -40);
   if (best && bd < 55) { tx = p.x - (best.x - p.x) * 3; ty = p.y - (best.y - p.y) * 3; }   // bị áp sát: lùi ra
   if (tx > p.x + 6) input.keys.add("d"); else if (tx < p.x - 6) input.keys.add("a");
@@ -3234,6 +3500,14 @@ class MenuUI {
       armoryGrid: $("armory-grid"), recipeList: $("recipe-list"), upgradeList: $("upgrade-list"), upChar: $("up-char"),
       portalChar: $("portal-char"), loadout: $("portal-loadout"),
       shopList: $("shop-list"), shopGold: $("shop-gold"), shopMsg: $("shop-msg"), shopClose: $("shop-close"),
+      // --- bản 5.0: Cổng Xuất Kích (chế độ + Túi Chiến Thuật) & bảng Tổng kết Rút Quân ---
+      quickLabel: $("quick-label"), startLabel: $("start-label"), portalHint: $("portal-hint"),
+      modeExtract: $("mode-extract"), modeArcade: $("mode-arcade"), ppExtract: $("pp-extract"),
+      stashItems: $("stash-items"), stashWeapons: $("stash-weapons"), stashWCount: $("stash-wcount"),
+      bagSlots: $("bag-slots"), bagWeapon: $("bag-weapon"), durBtns: $("dur-btns"),
+      xresult: $("xresult"), xrKicker: $("xr-kicker"), xrTitle: $("xr-title"), xrSub: $("xr-sub"), xrMissions: $("xr-missions"),
+      xrTime: $("xr-time"), xrKills: $("xr-kills"), xrScore: $("xr-score"), xrGems: $("xr-gems"), xrHaulH: $("xr-haul-h"), xrHaul: $("xr-haul"),
+      xrAgain: $("xr-again"), xrHome: $("xr-home"),
     };
     this.buildTitle();
     this.bindEvents();
@@ -3269,6 +3543,12 @@ class MenuUI {
     this.el.lpClose.addEventListener("click", () => this.closePanels());
     this.el.lp.addEventListener("click", (e) => { if (e.target === this.el.lp) this.closePanels(); });   // bấm ra ngoài bảng = đóng
     this.el.shopClose.addEventListener("click", () => g.closeShop());
+    // Cổng Xuất Kích: chọn chế độ, thời lượng · Tổng kết rút quân
+    this.el.modeExtract.addEventListener("click", () => { g.setMode("extract"); g.sound.play("uiSelect", 0.5); this.renderPanel(); });
+    this.el.modeArcade.addEventListener("click", () => { g.setMode("arcade"); g.sound.play("uiSelect", 0.5); this.renderPanel(); });
+    this.el.durBtns.addEventListener("click", (e) => { const m = Number(e.target.closest("button")?.dataset.min); if (m) { g.stash.setDuration(m); g.sound.play("uiSelect", 0.5); this.renderPanel(); } });
+    this.el.xrAgain.addEventListener("click", () => g.start(g.charIndex));
+    this.el.xrHome.addEventListener("click", () => g.goMenu());
     window.addEventListener("pointerdown", () => g.sound.unlock(), { once: true });
   }
 
@@ -3361,7 +3641,10 @@ class MenuUI {
 
   updateQuick() {
     const g = this.game;
-    this.el.quickSub.textContent = `${CHARACTERS[g.charIndex].name} · ${BIOMES[g.mapIndex].name} · ${DIFFICULTY[g.diffIndex].name}`;
+    this.el.quickLabel.textContent = g.mode === "extract" ? "XUẤT KÍCH" : "VÀO TRẬN NHANH";
+    this.el.quickSub.textContent = g.mode === "extract"
+      ? `Rút Quân · ${CHARACTERS[g.charIndex].name} · ${String(g.stash.duration).padStart(2, "0")}:00 · ${DIFFICULTY[g.diffIndex].name}`
+      : `Giải Trí · ${CHARACTERS[g.charIndex].name} · ${BIOMES[g.mapIndex].name} · ${DIFFICULTY[g.diffIndex].name}`;
     this.el.gems.textContent = g.progress.gems;
   }
 
@@ -3374,8 +3657,9 @@ class MenuUI {
     e.lpArmory.classList.toggle("hidden", id !== "armory");
     e.lpUpgrade.classList.toggle("hidden", id !== "upgrade");
     e.lpPortal.classList.toggle("hidden", id !== "portal");
-    e.lpTitle.textContent = { armory: "KHO VŨ KHÍ", upgrade: "BÀN NÂNG CẤP", portal: "CỔNG DỊCH CHUYỂN" }[id];
+    e.lpTitle.textContent = { armory: "KHO VŨ KHÍ", upgrade: "BÀN NÂNG CẤP", portal: "CỔNG XUẤT KÍCH" }[id];
     e.lp.dataset.kind = id;
+    e.lp.classList.remove("is-extract");
     this.renderPanel();
     e.lp.classList.remove("hidden");
     (id === "portal" ? e.start : e.lpClose).focus();
@@ -3418,7 +3702,7 @@ class MenuUI {
       const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, w, 0, 0, 30, 18, 1);
       const nm = document.createElement("strong"); nm.textContent = w.name;
       const meta = document.createElement("span"); meta.className = "arm-meta";
-      meta.textContent = `${rarityName(w.rarity)} · ${w.cost ? `${w.cost} năng lượng/phát` : "không tốn năng lượng"}${w.charge ? " · tích lực" : ""}${isMelee(w) ? " · cận chiến" : ""}`;
+      meta.textContent = `${rarityName(w.rarity)} · ${w.mag ? `băng ${w.mag} viên · nạp ${w.reload}s` : w.cost ? `${w.cost} năng lượng/phát` : "không tốn năng lượng"}${w.charge ? " · tích lực" : ""}${isMelee(w) ? " · cận chiến" : ""}`;
       const ds = document.createElement("span"); ds.className = "arm-desc"; ds.textContent = w.desc;
       const act = document.createElement("span"); act.className = "arm-btn";
       act.textContent = eq ? "✓ ĐANG MANG" : own ? "MANG THEO" : `CHẾ TẠO · ${cost} NGỌC`;
@@ -3469,10 +3753,74 @@ class MenuUI {
   }
 
   renderPortal() {
-    const g = this.game, pr = g.progress, char = CHARACTERS[g.charIndex];
-    this.el.portalChar.textContent = char.name;
-    const sec = pr.secondary ? WEAPONS[pr.secondary] : null;
-    this.el.loadout.innerHTML = `Mang vào trận: <b>${char.weapon.name}${pr.level(char.id, "weapon") ? " " + "★".repeat(1 + pr.level(char.id, "weapon")) : ""}</b>${sec ? ` + <b style="color:${rarityColor(sec.rarity)}">${sec.name}</b>` : " · ô 2 trống"} · Máu ${char.stats.hp + pr.level(char.id, "hp")} · Giáp ${char.stats.armor + pr.level(char.id, "armor")}`;
+    const g = this.game, pr = g.progress, char = CHARACTERS[g.charIndex], e = this.el, ex = g.mode === "extract";
+    e.portalChar.textContent = char.name;
+    e.lp.classList.toggle("is-extract", ex && this.panel === "portal");
+    e.modeExtract.setAttribute("aria-selected", String(ex));
+    e.modeArcade.setAttribute("aria-selected", String(!ex));
+    e.ppExtract.classList.toggle("hidden", !ex);
+    e.startLabel.textContent = ex ? "LÊN MÁY BAY" : "VÀO TRẬN";
+    e.portalHint.innerHTML = ex
+      ? `Trang bị cho <b class="c-gold">${char.name}</b>. Phím <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: lên máy bay.`
+      : `Chọn nơi xuất trận cho <b class="c-gold">${char.name}</b>. Phím <kbd>←</kbd><kbd>→</kbd>: bản đồ · <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: vào trận.`;
+    const crafted = pr.secondary ? WEAPONS[pr.secondary] : null, kit = ex ? g.stash.bagWeaponDef : null, sec = kit?.def ?? crafted;
+    const lvl = pr.level(char.id, "weapon");
+    e.loadout.innerHTML = `Mang vào trận: <b>${char.weapon.name}${lvl ? " " + "★".repeat(1 + lvl) : ""}</b>${sec ? ` + <b style="color:${rarityColor(sec.rarity)}">${sec.name}</b>` : " · ô 2 trống"} · Máu, Giáp, Năng lượng 100%`;
+    if (ex) this.renderKit();
+  }
+
+  /** CỔNG XUẤT KÍCH — chế độ Rút Quân: Kho Đồ (bấm để bỏ vào túi) · Túi Chiến Thuật 4 ô · súng trong Kho · thời lượng */
+  renderKit() {
+    const g = this.game, st = g.stash, e = this.el, imgs = g.assets.images;
+    const icon = (id, size = 16) => { const cv = document.createElement("canvas"); cv.width = cv.height = size; const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawItemIcon(c2, id, 0, 0, size, imgs); return cv; };
+    e.stashItems.replaceChildren();
+    for (const id of ITEM_ORDER) {
+      const d = ITEM_DEFS[id], have = st.count(id), free = st.free(id);
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "stash-item"; b.title = `${d.name}: ${d.desc}`;
+      b.disabled = free <= 0 || !st.bag.some((s) => !s || (s.id === id && s.n < d.stack));
+      const n = document.createElement("b"); n.textContent = `x${have}`;
+      const nm = document.createElement("span"); nm.textContent = d.name;
+      b.append(icon(id), n, nm);
+      if (free > 0 && free !== have) { const f = document.createElement("i"); f.className = "free"; f.textContent = `+${free}`; b.append(f); }
+      b.addEventListener("click", () => { if (st.addToBag(id)) g.sound.play("swap", 0.5); else g.sound.play("skillDenied", 0.4); this.renderPanel(); });
+      e.stashItems.append(b);
+    }
+    e.bagSlots.replaceChildren();
+    const keys = TOUCH ? ["1", "2", "3", "4"] : ["Z", "X", "C", "V"];
+    st.bag.forEach((s, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = `bag-slot${s ? "" : " empty"}`;
+      const k = document.createElement("span"); k.className = "key"; k.textContent = keys[i];
+      b.append(k);
+      if (s) {
+        b.title = `${ITEM_DEFS[s.id].name} x${s.n} — bấm để bớt 1`;
+        const c = document.createElement("span"); c.className = "cnt"; c.textContent = `x${s.n}`;
+        b.append(icon(s.id), c);
+        b.addEventListener("click", () => { st.removeFromBag(i); g.sound.play("swap", 0.4); this.renderPanel(); });
+      } else b.title = "Ngăn trống — bấm món trong Kho Đồ để bỏ vào";
+      e.bagSlots.append(b);
+    });
+    // súng trong kho (mang theo 1 khẩu làm vũ khí phụ — mất nếu tử trận)
+    e.stashWeapons.replaceChildren();
+    e.stashWCount.textContent = `${st.weapons.length} khẩu`;
+    if (!st.weapons.length) { const p = document.createElement("p"); p.className = "stash-empty"; p.textContent = "Chưa có. Nhặt súng trong trận rồi rút quân để mang về."; e.stashWeapons.append(p); }
+    st.weapons.forEach((w, i) => {
+      const def = WEAPONS[w.id]; if (!def) return;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = `stash-weapon${st.bagWeapon === i ? " on" : ""}`;
+      b.style.setProperty("--r-color", rarityColor(def.rarity));
+      b.title = `${def.name}${w.lvl > 1 ? " " + "★".repeat(w.lvl) : ""} — ${def.desc}`;
+      const cv = document.createElement("canvas"); cv.width = 36; cv.height = 22;
+      const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, def, 0, 0, 36, 22, 1);
+      const t = document.createElement("span"); t.textContent = `${def.name}${w.lvl > 1 ? " " + "★".repeat(w.lvl) : ""}`;
+      b.append(cv, t);
+      b.addEventListener("click", () => { st.setBagWeapon(st.bagWeapon === i ? -1 : i); g.sound.play("swap", 0.5); this.renderPanel(); });
+      e.stashWeapons.append(b);
+    });
+    const bw = st.bagWeaponDef;
+    e.bagWeapon.innerHTML = bw ? `Vũ khí phụ: <b style="color:${rarityColor(bw.def.rarity)}">${bw.def.name}${bw.lvl > 1 ? " " + "★".repeat(bw.lvl) : ""}</b> (mang từ Kho — có rủi ro)` : "Vũ khí phụ: chọn 1 súng trong Kho, hoặc dùng vũ khí chế tạo ở Kho Vũ Khí.";
+    for (const b of e.durBtns.querySelectorAll("button")) b.classList.toggle("on", Number(b.dataset.min) === st.duration);
   }
 
   toggleMute() { this.game.sound.toggleMute(); this.syncMute(); }
@@ -3490,12 +3838,11 @@ class MenuUI {
     if (this.panel) {
       if (k.has("escape") || (k.has("e") && document.activeElement?.tagName !== "INPUT")) { this.closePanels(); return; }
       if (this.panel === "portal") {
-        if (k.has("arrowleft") || k.has("a")) this.stepMap(-1);
-        if (k.has("arrowright") || k.has("d")) this.stepMap(1);
+        if (g.mode === "arcade" && (k.has("arrowleft") || k.has("a"))) this.stepMap(-1);
+        if (g.mode === "arcade" && (k.has("arrowright") || k.has("d"))) this.stepMap(1);
         if (k.has("arrowup") || k.has("w")) this.stepDiff(-1);
         if (k.has("arrowdown") || k.has("s")) this.stepDiff(1);
         if (k.has("enter") && document.activeElement !== this.el.start) { g.start(g.charIndex); return; }
-        this.renderPortal();
       }
       g.lobby.update(dt, input);
       return;
@@ -3508,6 +3855,7 @@ class MenuUI {
 
   showMenu() {
     this.el.gameover.classList.add("hidden");
+    this.el.xresult.classList.add("hidden");
     this.el.levelup.classList.add("hidden");
     this.el.shop.classList.add("hidden");
     this.el.menu.classList.remove("hidden");
@@ -3540,6 +3888,48 @@ class MenuUI {
     e.shop.classList.add("hidden");
     e.gameover.classList.remove("hidden");
     stage.classList.remove("in-game");
+  }
+
+  /** TỔNG KẾT RÚT QUÂN: thành công (đồ mang về Kho) / tử trận (đồ đã mất) */
+  showExtractResult(r) {
+    const g = this.game, e = this.el, imgs = g.assets.images;
+    e.xresult.classList.toggle("fail", !r.success);
+    e.xrKicker.textContent = `${g.world.biome?.name ?? "Vùng dịch"} · ${CHARACTERS[g.charIndex].name} · ${g.diff.name}`;
+    e.xrTitle.textContent = r.success ? "RÚT QUÂN THÀNH CÔNG" : r.reason === "abandon" ? "BỎ NHIỆM VỤ" : "TỬ TRẬN";
+    e.xrSub.textContent = r.success
+      ? (r.done === r.all ? "Hoàn thành mọi nhiệm vụ. Toàn bộ chiến lợi phẩm đã cất vào Kho Đồ." : "Trực thăng đã đưa bạn về căn cứ. Chiến lợi phẩm đã cất vào Kho Đồ.")
+      : "Toàn bộ đồ mang theo trong ván đã mất. Nhân vật, vũ khí khởi đầu và đồ cất ở nhà vẫn còn.";
+    e.xrMissions.textContent = `${r.done}/${r.all}`;
+    e.xrTime.textContent = fmtTime(r.time);
+    e.xrKills.textContent = r.kills;
+    e.xrScore.textContent = r.score;
+    e.xrGems.textContent = `+${r.gems}`;
+    e.xrGems.title = `Đang có ${g.progress.gems} Ngọc`;
+    const haul = r.success ? r.haul : r.lost;
+    e.xrHaulH.textContent = r.success ? "Mang về Kho Đồ" : "Đồ đã mất";
+    e.xrHaul.replaceChildren();
+    let any = false;
+    for (const [id, n] of Object.entries(haul?.items ?? {})) {
+      if (!n) continue; any = true;
+      const d = document.createElement("span"); d.className = "hi"; d.title = ITEM_DEFS[id]?.name ?? id;
+      const cv = document.createElement("canvas"); cv.width = cv.height = 16; const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawItemIcon(c2, id, 0, 0, 16, imgs);
+      d.append(cv, document.createTextNode(`x${n}`));
+      e.xrHaul.append(d);
+    }
+    for (const w of haul?.weapons ?? []) {
+      const def = WEAPONS[w.id]; if (!def) continue; any = true;
+      const d = document.createElement("span"); d.className = "hi"; d.title = def.name;
+      const cv = document.createElement("canvas"); cv.width = 36; cv.height = 22; cv.className = "wide"; const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, def, 0, 0, 36, 22, 1);
+      d.append(cv, document.createTextNode(def.name));
+      e.xrHaul.append(d);
+    }
+    if (!any) { const n = document.createElement("span"); n.className = "none"; n.textContent = r.success ? "Túi rỗng — lần sau lục thêm hòm tiếp tế!" : "Không mang theo gì."; e.xrHaul.append(n); }
+    e.levelup.classList.add("hidden");
+    e.shop.classList.add("hidden");
+    e.gameover.classList.add("hidden");
+    e.xresult.classList.remove("hidden");
+    stage.classList.remove("in-game");
+    e.xrAgain.focus();
   }
 
   /** Giao diện Lên Cấp: 3 thẻ nâng cấp ngẫu nhiên (click hoặc phím 1/2/3), nút Đổi bộ thẻ (R) */
@@ -3618,6 +4008,7 @@ class MenuUI {
 
   hideAll() {
     this.el.menu.classList.add("hidden");
+    this.el.xresult.classList.add("hidden");
     this.el.rules.classList.add("hidden");
     this.el.gameover.classList.add("hidden");
     this.el.levelup.classList.add("hidden");
@@ -3700,7 +4091,9 @@ async function main() {
   window.SPRITES = sprites;   // xem trong Console (F12): SPRITES.effects.get("hit").sheet
   window.DEBUG = { WEAPONS, makeWeapon, EnemyBullet };   // thử vũ khí trong Console: game.player.pickWeapon(DEBUG.WEAPONS.rocket, game)
 
+  prepareGunSprites(assets.images);   // thu nhỏ ảnh súng Pixel Armory cho vừa nhân vật (src/guns.js)
   game = new Game(assets, new SoundManager(assets.sounds));
+  game.actorSprites = ACTOR_SPRITES;
   game.ui = new MenuUI(game);
   // SẢNH CHỜ: căn phòng đi lại được (src/lobby.js)
   game.lobby = new Lobby({
@@ -3716,7 +4109,9 @@ async function main() {
   });
   window.game = game; // tiện debug trong Console (F12)
 
-  if (AUTOPLAY) {
+  if (AUTOPLAY || EXTRACT_TEST) {
+    // #extract... = thử chế độ Rút Quân · #autoplay... (không có "extract") = Chế độ Giải Trí như cũ
+    game.setMode(EXTRACT_TEST ? "extract" : "arcade");
     const [, c, m] = location.hash.split("-");
     game.mapIndex = clamp(Number(m) || 0, 0, BIOMES.length - 1);
     const dm = location.hash.match(/diff-(\d)/); if (dm) game.diffIndex = clamp(Number(dm[1]), 0, DIFFICULTY.length - 1);

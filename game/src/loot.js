@@ -8,7 +8,7 @@
 //  Vũ khí trên đất: lại gần bấm E để nhặt (2 khẩu giống nhau -> GHÉP lên ★)
 //  Vàng & Ngọc Năng Lượng (Drop): quái / thùng gỗ / lọ năng lượng rơi ra, tự bay về khi lại gần
 // =====================================================================================
-import { WEAPONS, WEAPONS_BY_RARITY, WEAPON_RARITY, drawWeaponFallback, weaponSpan } from "./weapons.js";
+import { WEAPONS, WEAPONS_BY_RARITY, WEAPON_RARITY, drawWeaponFallback, weaponSpan, weaponCenterY } from "./weapons.js";
 import { pick, rand, withAlpha, TAU } from "./util.js";
 import { Pool } from "./pool.js";
 
@@ -157,7 +157,7 @@ export class Pickup {
       case "weapon": {
         c.save();
         const span = weaponSpan(this.weapon);
-        c.translate(x - Math.round((span[0] + span[1]) / 2), y - 2);
+        c.translate(x - Math.round((span[0] + span[1]) / 2), y - 2 - weaponCenterY(this.weapon));   // súng sprite: căn tâm ảnh
         drawWeaponFallback(c, this.weapon);
         c.restore();
         break;

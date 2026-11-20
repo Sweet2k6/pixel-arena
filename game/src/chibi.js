@@ -98,7 +98,7 @@ export const CHIBI_ANIMS = {
 const ROWS = ["idle", "run", "skill"];
 
 /**
- * Vẽ 1 frame. look = { skin, hair, outfit, outfit2, pants, shoes, eyes, head: "knight" | "monk" | "wizard" | "skull" | "helm", accent, accent2 }
+ * Vẽ 1 frame. look = { skin, hair, outfit, outfit2, pants, shoes, eyes, head: "knight" | "monk" | "wizard" | "skull" | "helm" | "zombie", accent, accent2, arms: "reach" (tay giơ thẳng), belly: màu bụng phình }
  * Trả về { rgba, hand: [x, y] } — hand = vị trí bàn tay cầm vũ khí, tính từ chân.
  */
 function drawFrame(look, P, W, H, ax, ay) {
@@ -108,9 +108,14 @@ function drawFrame(look, P, W, H, ax, ay) {
   const lean = P.lean, bob = P.bob;
   const bodyY = -6 + bob, headCY = -22 + bob, hx = lean;   // tâm đầu
 
+  const reach = look.arms === "reach";   // ZOMBIE: 2 tay giơ thẳng ra trước
   // --- tay sau (khuất sau thân)
   const armF = new Layer();
-  armF.rect(-6 + P.armF[0], bodyY - 7 + P.armF[1], 3, 5, look.armSkin ? skin : outfit2);
+  if (reach) {
+    const sway = [0, 1, 0, -1][P.tail % 4];   // tay đung đưa nhẹ
+    armF.rect(-2 + P.armF[0] + lean, bodyY - 7 + sway, 11, 3, look.armSkin ? skin : outfit2);
+    armF.rect(8 + lean, bodyY - 8 + sway, 3, 4, skin);
+  } else armF.rect(-6 + P.armF[0], bodyY - 7 + P.armF[1], 3, 5, look.armSkin ? skin : outfit2);
   // --- chân: chân sau rồi chân trước, giày nhô về trước 1px
   const legF = new Layer(), legN = new Layer();
   const leg = (L, x, lift, robe) => {
@@ -124,13 +129,25 @@ function drawFrame(look, P, W, H, ax, ay) {
   const bx = Math.round(lean / 2);
   body.poly([[-6 + bx, bodyY - 9], [5 + bx, bodyY - 9], [6 + bx, bodyY + 1], [-7 + bx, bodyY + 1]], outfit);
   if (look.robe) body.poly([[-7 + bx, bodyY], [6 + bx, bodyY], [7 + bx, 0], [-8 + bx, 0]], outfit);   // áo choàng dài
+  if (look.belly) {   // bụng phình (Zombie Phun Độc): bóng bụng nhô ra trước, có đốm mủ sáng
+    const bc = T(look.belly);
+    body.oval(bx + 3, bodyY - 2, 8, 6, bc);
+    body.set(bx + 5, bodyY - 4, bc.hi); body.set(bx + 6, bodyY - 3, bc.hi); body.set(bx + 2, bodyY, bc.lo);
+  }
   if (look.belt) body.rect(-6 + bx, bodyY - 2, 12, 1, T(look.belt));
   if (look.chest) body.rect(-1 + bx, bodyY - 8, 2, 4, T(look.chest));
   // --- tay trước (cầm vũ khí) — bàn tay da
   const arm = new Layer();
   const handX = 4 + bx + P.arm[0], handY = bodyY - 4 + P.arm[1];
-  arm.rect(1 + bx, bodyY - 8 + P.arm[1], 3, 3, look.armSkin ? skin : outfit2);
-  arm.rect(handX - 1, handY - 1, 3, 3, skin);
+  if (reach) {
+    const sway = [0, 0, 1, 1][P.tail % 4];
+    arm.rect(1 + bx, bodyY - 7 + sway, 10, 3, look.armSkin ? skin : outfit2);
+    arm.rect(10 + bx, bodyY - 8 + sway, 3, 4, skin);
+    arm.set(12 + bx, bodyY - 4 + sway, [150, 20, 24]);   // móng tay dính máu
+  } else {
+    arm.rect(1 + bx, bodyY - 8 + P.arm[1], 3, 3, look.armSkin ? skin : outfit2);
+    arm.rect(handX - 1, handY - 1, 3, 3, skin);
+  }
 
   // --- ĐẦU (to!) + mặt + tóc / mũ
   const head = new Layer(), face = new Layer(), top = new Layer(), back = new Layer();
@@ -156,6 +173,30 @@ function drawFrame(look, P, W, H, ax, ay) {
     } else {               // mũ sắt kín: sống mũ
       top.rect(hx - 1, headCY - 10, 3, 3, steel);
     }
+  } else if (K === "zombie") {
+    // ZOMBIE: da xanh xám bệnh hoạn, tóc xơ xác lưa thưa, 1 mắt đỏ phát sáng + 1 hốc mắt tối, miệng toạc, vết rách / máu
+    head.oval(hcx, headCY, rx, ry, skin);
+    face.rect(hx + 1, headCY - 2, 3, 3, [14, 8, 16]);                       // hốc mắt trái: tối đen
+    face.set(hx + 2, headCY - 1, [60, 18, 28]);
+    const eyeC = rgb(look.eyes ?? "#ff2a2a");
+    face.rect(hx + 6, headCY - 2, 3, 3, [30, 6, 10]);                       // mắt phải: đỏ phát sáng
+    face.rect(hx + 6, headCY - 1, 2, 2, eyeC);
+    face.set(hx + 6, headCY - 1, [255, 220, 200]);
+    face.set(hx + 5, headCY - 3, mixc(eyeC, skin.mid, 0.5));               // quầng sáng
+    face.rect(hx + 2, headCY + 3, 8, 3, [18, 6, 12]);                       // miệng toạc
+    face.set(hx + 3, headCY + 3, [214, 208, 176]); face.set(hx + 5, headCY + 3, [214, 208, 176]); face.set(hx + 8, headCY + 3, [214, 208, 176]);
+    face.set(hx + 4, headCY + 5, [214, 208, 176]); face.set(hx + 7, headCY + 5, [214, 208, 176]);
+    face.rect(hx + 9, headCY + 4, 1, 3 + (P.tail % 2), [150, 14, 20]);      // máu nhỏ giọt khóe miệng
+    face.set(hx + 3, headCY + 6, [150, 14, 20]);
+    face.rect(hx - 3, headCY - 5, 4, 1, [120, 20, 26]);                     // vết rách trên trán
+    face.set(hx - 2, headCY - 4, [120, 20, 26]); face.set(hx, headCY - 4, [120, 20, 26]);
+    face.rect(hx - 6, headCY + 1, 2, 2, skin.lo);                           // mảng thối rữa bên má
+    // tóc xơ xác: vài mảng lưa thưa trên đỉnh + chỏm dựng
+    top.poly([[hx - 9, headCY - 2], [hx - 8, headCY - 6], [hx - 5, headCY - 9], [hx - 3, headCY - 7], [hx - 5, headCY - 4], [hx - 7, headCY]], hairC);
+    top.poly([[hx + 4, headCY - 9], [hx + 7, headCY - 8], [hx + 6, headCY - 6]], hairC);
+    const sw = P.tail % 2;
+    top.poly([[hx - 3, headCY - 9], [hx - 2, headCY - 12 - sw], [hx - 1, headCY - 9]], hairC);
+    top.poly([[hx + 1, headCY - 10], [hx + 3, headCY - 12 + sw], [hx + 4, headCY - 9]], hairC);
   } else if (K === "skull") {
     const bone = T(look.skin ?? "#f4f0e0");
     head.oval(hcx, headCY, rx - 0.5, ry, bone);

@@ -154,6 +154,17 @@ export const BOSS_PALETTE = ["#140a24", "#2c1450", "#4c2488", "#7a3cc8", "#a874f
 /** Pháp Sư Xương (quái triệu hồi) */
 LOOKS.shaman = { head: "wizard", hair: "#e8e8e8", accent: "#2a2438", accent2: "#7cf0a0", skin: "#c8d8c0", outfit: "#3a3048", outfit2: "#4a3c5c", robe: true, belt: "#7cf0a0", shoes: "#1a1420", eyes: "#ff3030" };
 
+// ---------------- ZOMBIE (chế độ Nhảy Dù – Rút Quân) ----------------
+//  head: "zombie" = da bệnh hoạn + 1 mắt đỏ + hốc mắt tối + miệng toạc · arms: "reach" = 2 tay giơ thẳng · belly = bụng phình
+/** Zombie Thường: áo sơ mi rách, quần jean */
+LOOKS.zWalker  = { head: "zombie", skin: "#8fa088", hair: "#3a3228", eyes: "#ff2a2a", arms: "reach", armSkin: true, outfit: "#b8b2a0", outfit2: "#9c9684", pants: "#3a5a8a", shoes: "#2a2a30", belt: "#5a4630", chest: "#7a2a2a" };
+/** Zombie Chạy Nhanh: gầy, áo thể thao đỏ, mắt đỏ rực */
+LOOKS.zRunner  = { head: "zombie", skin: "#7e9680", hair: "#1e1a18", eyes: "#ff5a3a", arms: "reach", armSkin: true, outfit: "#c8302e", outfit2: "#a82424", pants: "#2a2e3a", shoes: "#e8e8e8", chest: "#f0f0f0" };
+/** Zombie Phun Độc: bụng phình xanh độc, da vàng úa */
+LOOKS.zBloater = { head: "zombie", skin: "#b8b060", hair: "#4a4228", eyes: "#9cff4a", arms: "reach", armSkin: true, outfit: "#5a6a3a", outfit2: "#4a5a30", pants: "#4a4a34", shoes: "#2a2618", belly: "#6cd040" };
+/** Zombie Đột Biến (Boss): da tím-xanh, u bướu */
+LOOKS.zBoss    = { head: "zombie", skin: "#5a6aa8", hair: "#1c1430", eyes: "#ffe04a", arms: "reach", armSkin: true, outfit: "#3a2a5a", outfit2: "#4a3a7a", pants: "#241a3a", shoes: "#14101e", belly: "#8a46c8", chest: "#46e0a0" };
+
 export const ACTORS = {
   // các nhân vật chơi được (ngoại hình chibi lấy từ khối `chibi` trong characters.js)
   ...Object.fromEntries(CHARACTERS.map((c) => [c.id, c.spritesheet
@@ -176,6 +187,15 @@ export const ACTORS = {
   slimeKing: { kind: "critter", src: "assets/images/actors/slime-king.png", pixelfx: fxSlime,   options: { hop: 8, palette: ["#1a0610", "#3a0c1e", "#6a1430", "#a82a3a", "#e0504a", "#ffa070", "#fff0d0"] }, bake: { fps: 16 } },
   skullLord: { kind: "critter", src: "assets/images/actors/skull-lord.png", pixelfx: fxSkull,   options: { hover: 8, palette: ["#120a33", "#2a1b78", "#4630c0", "#5a62f0", "#58a6ff", "#9ed8ff", "#c8f0ff", "#e4f6ff", "#ffffff"] }, bake: { fps: 16 } },
   eyeLord:   { kind: "critter", src: "assets/images/actors/eye-lord.png",   pixelfx: fxEyeball, options: { hover: 10, iris: ["#2a0408", "#6a0c14", "#b01a20", "#f04a3a", "#ffd0a0"] }, bake: { fps: 16 } },
+  // ---------------- ZOMBIE ----------------
+  // >>> ẢNH ZOMBIE: thay file PNG này bằng spritesheet của bạn (3 hàng idle/run/skill, ô 40x44, chân ở (20,42)) — xóa file thì game tự vẽ lại
+  zWalker:  { kind: "chibi", src: "assets/images/actors/zombie-walker.png",  look: LOOKS.zWalker },
+  // >>> ẢNH ZOMBIE: thay file PNG này bằng spritesheet của bạn (3 hàng idle/run/skill, ô 40x44, chân ở (20,42)) — xóa file thì game tự vẽ lại
+  zRunner:  { kind: "chibi", src: "assets/images/actors/zombie-runner.png",  look: LOOKS.zRunner },
+  // >>> ẢNH ZOMBIE: thay file PNG này bằng spritesheet của bạn (3 hàng idle/run/skill, ô 40x44, chân ở (20,42)) — xóa file thì game tự vẽ lại
+  zBloater: { kind: "chibi", src: "assets/images/actors/zombie-bloater.png", look: LOOKS.zBloater },
+  // >>> ẢNH ZOMBIE: thay file PNG này bằng spritesheet của bạn (3 hàng idle/run/skill, ô 40x44, chân ở (20,42)) — xóa file thì game tự vẽ lại
+  zBoss:    { kind: "chibi", src: "assets/images/actors/zombie-boss.png",    look: LOOKS.zBoss },
   // vong linh của Tử Linh Sư
   spirit:    { kind: "critter", src: "assets/images/actors/spirit.png",     pixelfx: fxWisp,    options: { hover: 6, palette: NECRO }, bake: { fps: 16 } },
 };

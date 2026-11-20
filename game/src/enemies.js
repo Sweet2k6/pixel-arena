@@ -9,7 +9,12 @@
 //      "diver"     — Đầu Lâu Lửa: tới gần thì gồng 0.55s rồi lao thẳng như tên bắn
 //      "hopper"    — Ếch Độc: nhảy cóc từng quãng, phun axit làm chậm; chết để lại vũng axit
 //      "summoner"  — Pháp Sư Xương: đứng xa niệm chú gọi Dơi, bị áp sát thì dịch chuyển đi chỗ khác
+//      "bloater"   — Zombie Phun Độc: bò chậm tới tầm ~150px rồi cứ ~3s phun 1 cục axit làm chậm; chết nổ axit
+//      "bossZombie"— Zombie Đột Biến Khổng Lồ (chế độ Rút Quân): húc, nhảy đập đất, gầm gọi zombie
 //      "boss*"     — 4 BOSS luân phiên mỗi đợt (xem BOSS_ROTATION)
+//
+//  ZOMBIE BẦY ĐÀN (cờ `zombie: true`): sinh theo đàn do hordeAI.js điều khiển. Khi `passive = true` quái KHÔNG đuổi
+//  người chơi mà đi tới (goalX, goalY) với `patrolSpeed` (tuần tra / giữ đội hình); `passive = false` -> AI gốc (đuổi + bao vây).
 //
 //  Mọi chỉ số nằm trong ENEMY_TYPES. Độ khó tăng theo ĐỢT do main.js truyền vào (hpMul, speedMul, dmgBonus).
 //
@@ -53,7 +58,14 @@ export const ENEMY_TYPES = {
   frog:     { name: "Ếch Độc",          sprite: "frog",   ai: "hopper",   hp: 3,  speed: 0,   radius: 9,  bodyY: -7,  damage: 1, score: 20,  exp: 2, hopEvery: 1.0, hopTime: 0.38, hopDist: 72, spitRange: 190, spitEvery: 3.2, acidOnDeath: true },
   snake:    { name: "Rắn Độc",          sprite: "snake",  ai: "chase",    hp: 1.6, speed: 64,  radius: 8,  bodyY: -5,  damage: 1, score: 15,  exp: 1 },
   shaman:   { name: "Pháp Sư Xương",    sprite: "shaman", ai: "summoner", hp: 4,  speed: 36,  radius: 9,  bodyY: -17, damage: 1, score: 40,  exp: 4, keep: 230, summonEvery: 6.5, chantTime: 0.9, summon: "bat", count: 2, blinkCd: 4 },
+  // ---------------- ZOMBIE BẦY ĐÀN (chế độ Nhảy Dù – Rút Quân) ----------------
+  // patrolSpeed: tốc độ lê bước khi tuần tra · deathBlast/acidOnDeath: main.js xử lý khi chết
+  zWalker:  { name: "Zombie Thường",    sprite: "zWalker",  ai: "chase",   zombie: true, hp: 2.2, speed: 34, patrolSpeed: 14, radius: 9,  bodyY: -17, damage: 1, score: 12, exp: 1 },
+  zRunner:  { name: "Zombie Chạy Nhanh", sprite: "zRunner",  ai: "chase",   zombie: true, hp: 1.4, speed: 84, patrolSpeed: 20, radius: 8,  bodyY: -17, damage: 1, score: 16, exp: 1 },
+  zBloater: { name: "Zombie Phun Độc",  sprite: "zBloater", ai: "bloater", zombie: true, hp: 5,   speed: 24, patrolSpeed: 10, radius: 11, bodyY: -21, damage: 1, score: 30, exp: 3, scale: 1.3,
+              spitRange: 150, spitEvery: 3, castTime: 0.5, acidOnDeath: true, deathBlast: { radius: 48, damage: 3, playerDamage: 1 } },
   // ---------------- BOSS ----------------
+  zBoss:     { name: "Zombie Đột Biến Khổng Lồ", sprite: "zBoss", ai: "bossZombie", zombie: true, boss: true, hp: 150, speed: 30, patrolSpeed: 16, radius: 24, bodyY: -38, damage: 2, score: 400, exp: 30, scale: 2.4, aura: "#4aff8a", slamR: 80 },
   boss:      { name: "Hồn Ma Tím",        sprite: "boss",      ai: "boss",      boss: true, hp: 80, speed: 40, radius: 24, bodyY: -40, damage: 2, score: 300, exp: 25, image: "enemyBoss", flying: true, scale: 2.2, aura: "#7a3cc8" },
   slimeKing: { name: "Vua Slime",         sprite: "slimeKing", ai: "bossSlime", boss: true, hp: 95, speed: 30, radius: 26, bodyY: -30, damage: 2, score: 350, exp: 28, scale: 2.5, aura: "#c8343f" },
   skullLord: { name: "Chúa Tể Đầu Lâu",   sprite: "skullLord", ai: "bossSkull", boss: true, hp: 90, speed: 46, radius: 22, bodyY: -38, damage: 2, score: 380, exp: 30, flying: true, scale: 2.0, aura: "#ff6a1e" },
@@ -131,6 +143,10 @@ export class Enemy {
     this.flank = rand(-1, 1) * CROWD.flank;   // hướng vòng vây riêng của con này
     this.moving = false;
     this.gridId = -1;
+    // Bầy đàn zombie (hordeAI.js) — phải đặt lại hết vì Object Pool tái dùng đối tượng
+    this.squad = null; this.leader = false; this.passive = false;
+    this.goalX = x; this.goalY = y; this.alertT = 0;
+    this.fox = 0; this.foy = 0;        // vị trí đội hình so với đầu đàn
 
     // Hoạt ảnh: spritesheet + AnimationController (Idle/Run cho quái hình người, "move" cho Slime/Dơi/Ma)
     this.sprite = sprites?.get(t.sprite) ?? null;
@@ -143,7 +159,9 @@ export class Enemy {
   get cx() { return this.x; }
   get cy() { return this.y + this.cfg.bodyY * this.sc - this.z; }
   get canHurt() { return this.spawnTime <= 0 && !this.air && !this.jump && !this.cfg.noContact && !(this.freezeT > 0) && !(this.stunT > 0); }
-  get speed() { return this.cfg.speed * this.spd * this.speedMul * (this.rush > 0 ? 2.3 : 1); }
+  get speed() { return this.cfg.speed * this.spd * this.speedMul * (this.rush > 0 ? 2.3 : 1) * (this.enraged ? 1.35 : 1); }
+  /** Zombie Đột Biến dưới 50% máu: nhanh hơn */
+  get enraged() { return this.type === "zBoss" && this.hp < this.maxHp * 0.5; }
 
   /** Đóng băng t giây. Boss tối đa 0.8s. Vừa tan băng thì miễn nhiễm 1 lúc. Trả về true nếu vừa mới bị đóng băng. */
   freeze(t) {
@@ -224,6 +242,8 @@ export class Enemy {
       const u = this.air.t / this.air.dur;
       this.z = Math.sin(Math.PI * Math.min(1, u)) * this.air.h;
       if (u >= 1) { this.air = null; this.z = 0; }
+    } else if (this.passive) {
+      this.updatePatrol(dt, game);   // zombie trong đàn chưa phát hiện người chơi: lê bước theo goal
     } else {
       switch (this.cfg.ai) {
         case "chase": { const [fx, fy] = this.flankDir(ux, uy, d); this.steer(game, fx, fy, this.speed, dt); break; }
@@ -245,11 +265,13 @@ export class Enemy {
         case "bossSlime": this.updateSlimeKing(dt, game, d, ux, uy); break;
         case "bossSkull": this.updateSkullLord(dt, game, d, ux, uy); break;
         case "bossEye": this.updateEyeLord(dt, game, d, ux, uy); break;
+        case "bloater": this.updateBloater(dt, game, d, ux, uy); break;
+        case "bossZombie": this.updateZombieBoss(dt, game, d, ux, uy); break;
       }
     }
     if (this.elite) this.updateElite(dt, game, d, ux, uy);
     if (this.dead) return;
-    if (this.cfg.ai !== "tank" && this.state !== "dive" && this.state !== "laser") this.facing = Math.atan2(dy, dx);
+    if (this.cfg.ai !== "tank" && this.state !== "dive" && this.state !== "laser" && !this.passive) this.facing = Math.atan2(dy, dx);
 
     // lực đẩy lùi (có va chạm tường)
     if (Math.abs(this.kx) > 1 || Math.abs(this.ky) > 1) game.world.moveBody(this, this.kx * dt, this.ky * dt, Math.max(5, this.radius * 0.6), this.cfg.flying);
@@ -258,9 +280,96 @@ export class Enemy {
 
     // --- Hoạt ảnh theo deltaTime ---
     if (this.anim) {
+      if (this.cfg.zombie) {
+        // zombie: chạy khi di chuyển, hàng "skill" (gồng người) khi gồng / gầm / nhảy / phun
+        const st = this.state;
+        this.anim.set(st === "windup" || st === "crouch" || st === "jump" || st === "roar" || st === "cast" ? "skill" : this.moving ? "run" : "idle");
+        this.anim.update(dt, this.speedMul < 1 ? 0.6 : this.passive ? 0.7 : st === "move" && this.moving ? Math.min(1.6, 0.5 + this.speed / 60) : 1);
+        return;
+      }
       if (this.anim.anims.run) this.anim.set(this.moving && this.state !== "aim" && this.state !== "chant" ? "run" : "idle");
       const busy = this.state === "windup" || this.state === "cast" || this.state === "chant" || this.fuse >= 0;
       this.anim.update(dt, this.air ? 2 : busy ? 2.5 : this.speedMul < 1 ? 0.6 : 1);
+    }
+  }
+
+  // ---------- ZOMBIE TUẦN TRA: đi tới (goalX, goalY), dừng khi tới gần ----------
+  updatePatrol(dt, game) {
+    const gx = this.goalX - this.x, gy = this.goalY - this.y, d2 = gx * gx + gy * gy;
+    if (d2 < 25) { this.moving = false; return; }            // tới nơi (< 5px)
+    const d = Math.sqrt(d2), ux = gx / d, uy = gy / d;
+    const base = this.cfg.patrolSpeed ?? this.cfg.speed * 0.4;
+    // ở xa vị trí đội hình thì rảo bước để bắt kịp đầu đàn
+    const v = base * this.spd * this.speedMul * (d > 28 ? Math.min(2.2, 1 + (d - 28) / 60) : 1);
+    this.steer(game, ux, uy, v, dt);
+    this.facing = Math.atan2(uy, ux);
+  }
+
+  // ---------- Zombie Phun Độc: bò tới tầm phun rồi cứ ~3s nhổ 1 cục axit làm chậm ----------
+  updateBloater(dt, game, d, ux, uy) {
+    const c = this.cfg, p = game.player;
+    this.reload -= dt;
+    if (this.state === "cast") {
+      this.aimAngle = Math.atan2(p.cy - this.cy, p.cx - this.cx);
+      if (this.stateTime <= 0) {
+        this.shoot(game, this.aimAngle, { speed: 150, damage: 1, radius: 4, style: "acid", life: 1.8, slow: 1.5, offset: 10 });
+        game.sound.play("poison", 0.3);
+        this.state = "move"; this.reload = c.spitEvery * rand(0.85, 1.15);
+      }
+      return;
+    }
+    if (d > c.spitRange * 0.8) { const [fx, fy] = this.flankDir(ux, uy, d); this.steer(game, fx, fy, this.speed, dt); }
+    else if (d < 70) this.steer(game, -ux, -uy, this.speed * 0.6, dt);   // quá gần: lùi nhẹ cho dễ phun
+    if (this.reload <= 0 && d < c.spitRange && this.spawnTime <= 0 && game.world.lineOfSight(this.cx, this.cy, p.cx, p.cy)) { this.state = "cast"; this.stateTime = c.castTime; }
+  }
+
+  // ---------- BOSS ZOMBIE ĐỘT BIẾN: đuổi chậm · gồng HÚC · NHẢY ĐẬP ĐẤT · GẦM gọi 3 zombie ----------
+  updateZombieBoss(dt, game, d, ux, uy) {
+    const p = game.player, rage = this.enraged;
+    switch (this.state) {
+      case "move":
+        this.steer(game, ux, uy, this.speed, dt);
+        if (this.stateTime <= 0) {
+          const seq = ["charge", "slam", "roar", "slam", "charge"], next = seq[this.attack++ % seq.length];
+          if (next === "charge") { this.state = "windup"; this.stateTime = rage ? 0.55 : 0.8; this.aimAngle = Math.atan2(uy, ux); game.sound.play("bossCharge", 0.6); }
+          else if (next === "slam") {
+            this.state = "crouch"; this.stateTime = rage ? 0.5 : 0.75;
+            const pt = game.world.isFree(p.x, p.y, 14) ? { x: p.x, y: p.y } : game.world.randomFreePoint({ near: p, minD: 0, maxD: 60, margin: 14 });
+            this.tx = pt?.x ?? this.x; this.ty = pt?.y ?? this.y;
+            game.sound.play("bossCharge", 0.5);
+          } else { this.state = "roar"; this.stateTime = 1.0; game.sound.play("zombieHowl", 0.7); game.shake(0.3, 2); }
+        }
+        break;
+      case "windup":   // gồng 0.8s, drawOverlay vẽ vạch cảnh báo đường húc
+        this.aimAngle = Math.atan2(uy, ux); this.facing = this.aimAngle;
+        if (this.stateTime <= 0) { this.state = "charge"; this.stateTime = 0.65; game.sound.play("skillDash", 0.6); }
+        break;
+      case "charge": this.updateCharge(dt, game, rage ? 420 : 360); break;
+      case "crouch":   // vòng cảnh báo đỏ nơi sắp đập xuống
+        if (this.stateTime <= 0) { this.state = "jump"; this.jump = { t: 0, dur: 0.75, sx: this.x, sy: this.y }; }
+        break;
+      case "jump": {
+        const J = this.jump; if (!J) { this.state = "move"; this.stateTime = 1; break; }
+        J.t += dt;
+        const u = Math.min(1, J.t / J.dur), e = u * u * (3 - 2 * u);
+        this.x = J.sx + (this.tx - J.sx) * e; this.y = J.sy + (this.ty - J.sy) * e;
+        this.z = Math.sin(Math.PI * u) * 80;
+        if (u >= 1) {
+          this.jump = null; this.z = 0; this.lands++;
+          game.bossSlam(this.x, this.y, this.cfg.slamR, 2 + this.dmgBonus);
+          const n = rage ? 14 : 10, off = rand(0, TAU);
+          for (let i = 0; i < n; i++) this.shoot(game, off + (i / n) * TAU, { speed: 105, damage: 1, radius: 4, style: "acid", life: 3, slow: 1, offset: 18, noBonus: true });
+          this.state = "move"; this.stateTime = rage ? 1.0 : 1.7;
+        }
+        break;
+      }
+      case "roar":     // GẦM: gọi 3 zombie thường
+        if (this.stateTime <= 0) {
+          for (let i = 0; i < 3; i++) game.spawnMinion("zWalker", this.x + rand(-40, 40), this.y + rand(-14, 24));
+          game.fx.portal?.(this.x, this.y, 0.7);
+          this.state = "move"; this.stateTime = rage ? 1.0 : 1.6;
+        }
+        break;
     }
   }
 
@@ -624,12 +733,13 @@ export class Enemy {
       c.restore();
     }
     // Vua Slime: vòng đỏ nơi sắp đáp xuống
-    if (this.type === "slimeKing" && (this.state === "crouch" || this.state === "jump")) {
+    if ((this.type === "slimeKing" || this.type === "zBoss") && (this.state === "crouch" || this.state === "jump")) {
+      const R = this.cfg.slamR ?? 70;
       const k = this.state === "jump" && this.jump ? this.jump.t / this.jump.dur : 0;
       c.strokeStyle = withAlpha("#ff3b3b", 0.5 + 0.4 * Math.sin(game.time * 20)); c.lineWidth = 1;
-      c.beginPath(); c.ellipse(Math.round(this.tx), Math.round(this.ty), 70, 28, 0, 0, TAU); c.stroke();
+      c.beginPath(); c.ellipse(Math.round(this.tx), Math.round(this.ty), R, R * 0.4, 0, 0, TAU); c.stroke();
       c.fillStyle = withAlpha("#ff3b3b", 0.12 + 0.25 * k);
-      c.beginPath(); c.ellipse(Math.round(this.tx), Math.round(this.ty), 70 * Math.max(0.15, k), 28 * Math.max(0.15, k), 0, 0, TAU); c.fill();
+      c.beginPath(); c.ellipse(Math.round(this.tx), Math.round(this.ty), R * Math.max(0.15, k), R * 0.4 * Math.max(0.15, k), 0, 0, TAU); c.fill();
     }
   }
 
@@ -643,7 +753,7 @@ export class Enemy {
     let flip = Math.cos(this.facing) < 0, s = (this.cfg.scale ?? 1) * this.sc;
     // Vua Slime nhún người khi chuẩn bị nhảy
     let sx = s, sy = s;
-    if (this.type === "slimeKing" && this.state === "crouch") { sy = s * (0.85 + 0.05 * Math.sin(game.time * 30)); sx = s * 1.08; }
+    if ((this.type === "slimeKing" || this.type === "zBoss") && this.state === "crouch") { sy = s * (0.85 + 0.05 * Math.sin(game.time * 30)); sx = s * 1.08; }
     const img = this.cfg.image ? game.assets.images[this.cfg.image] : null;
     if (img) {
       // >>> ẢNH QUÁI CỦA BẠN (1 ảnh tĩnh, IMAGE_MANIFEST trong main.js) — chân tại (x, y), quay mặt sang PHẢI
@@ -662,9 +772,14 @@ export class Enemy {
       for (const [ox, oy] of OUTLINE) glow.draw(c, this.anim.col, this.anim.row, x + ox, y + oy, flip, s);
       c.globalAlpha = 1;
     }
-    const sheet = this.flash > 0 ? this.sprite.flash : this.freezeT > 0 ? this.sprite.frozen : this.state === "windup" || this.state === "cast" ? this.sprite.hot : this.sprite.sheet;
+    const sheet = this.flash > 0 ? this.sprite.flash : this.freezeT > 0 ? this.sprite.frozen : this.state === "windup" || this.state === "cast" || this.state === "roar" ? this.sprite.hot : this.sprite.sheet;
     if (sx !== sy) {
       c.save(); c.translate(x, y); c.scale(sx / s, sy / s);
+      sheet.draw(c, this.anim.col, this.anim.row, 0, 0, flip, s);
+      c.restore();
+    } else if (this.cfg.zombie && this.moving && !this.boss) {
+      // dáng lảo đảo: nghiêng nhẹ qua lại quanh chân khi lê bước
+      c.save(); c.translate(x, y); c.rotate(Math.sin(game.time * 6 + this.serial * 1.7) * 0.07);
       sheet.draw(c, this.anim.col, this.anim.row, 0, 0, flip, s);
       c.restore();
     } else sheet.draw(c, this.anim.col, this.anim.row, x, y, flip, s);

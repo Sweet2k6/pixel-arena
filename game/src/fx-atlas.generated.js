@@ -1886,5 +1886,441 @@ export const ATLAS = {
     "loop": true
    }
   }
+ },
+ "actor:zWalker": {
+  "src": "assets/images/actors/zombie-walker.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:zRunner": {
+  "src": "assets/images/actors/zombie-runner.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:zBloater": {
+  "src": "assets/images/actors/zombie-bloater.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
+ },
+ "actor:zBoss": {
+  "src": "assets/images/actors/zombie-boss.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ]
+   ],
+   [
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ],
+    [
+     5,
+     -10
+    ],
+    [
+     5,
+     -11
+    ]
+   ],
+   [
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ],
+    [
+     7,
+     -9
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
  }
 };
