@@ -20,12 +20,44 @@ export function text(ctx, s, x, y, color) {
   ctx.fillText(s, x, y);
 }
 
-export function drawBar(ctx, x, y, w, h, k, color, light, label) {
+/** Trạng thái hoạt ảnh của từng thanh (theo id): phần đang hiện, VỆT SÁT THƯƠNG tụt chậm phía sau, ánh sáng khi hồi */
+const BARS = new Map();
+/**
+ * Thanh % kiểu game hành động. opts (tùy chọn): { id, low, chip }
+ *   id   — bật hoạt ảnh: mất máu thì phần mất hiện VỆT SÁNG rồi tụt dần (sau 0.4 giây); hồi máu thì thanh dâng lên mượt + lóe sáng
+ *   low  — sắp cạn: nền nhấp nháy đỏ theo nhịp tim · chip — màu vệt sát thương (mặc định trắng ngà)
+ */
+export function drawBar(ctx, x, y, w, h, k, color, light, label, opts = null) {
+  k = clamp(k, 0, 1);
+  let shown = k, ghost = k, glow = 0;
+  if (opts?.id) {
+    const now = performance.now() / 1000;
+    let S = BARS.get(opts.id);
+    if (!S) { S = { shown: k, ghost: k, hold: 0, glow: 0, t: now }; BARS.set(opts.id, S); }
+    const dt = Math.min(0.1, now - S.t); S.t = now;
+    if (k < S.shown) { if (S.ghost < S.shown) S.ghost = Math.max(S.ghost, S.shown); else S.ghost = S.shown; S.shown = k; S.hold = 0.4; }
+    else if (k > S.shown) { S.shown = Math.min(k, S.shown + Math.max(0.004, (k - S.shown) * dt * 7)); S.glow = 1; }
+    if (S.ghost < S.shown) S.ghost = S.shown;
+    if ((S.hold -= dt) <= 0) S.ghost = Math.max(S.shown, S.ghost - dt * Math.max(0.35, (S.ghost - S.shown) * 3));
+    S.glow = Math.max(0, S.glow - dt * 3);
+    shown = S.shown; ghost = S.ghost; glow = S.glow;
+  }
+  const beat = opts?.low ? Math.max(0, Math.sin(performance.now() / 1000 * 8)) : 0;
   ctx.fillStyle = "#000"; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
-  ctx.fillStyle = "#2a2338"; ctx.fillRect(x, y, w, h);
-  const fw = Math.round(w * clamp(k, 0, 1));
+  ctx.fillStyle = beat > 0.6 ? "#5a1420" : "#2a2338"; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(x, y, w, 1);
+  const fw = Math.round(w * shown), gw = Math.round(w * ghost);
+  if (gw > fw) { ctx.fillStyle = opts?.chip ?? "#fff3d8"; ctx.fillRect(x + fw, y, gw - fw, h); }   // vệt sát thương
   ctx.fillStyle = color; ctx.fillRect(x, y, fw, h);
   ctx.fillStyle = light; ctx.fillRect(x, y, fw, Math.min(2, h));
+  if (h > 4) { ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.fillRect(x, y + h - 1, fw, 1); }
+  for (let i = 1; i < 10; i++) { const tx = x + Math.round((w * i) / 10); if (tx < x + fw) { ctx.fillStyle = "rgba(0,0,0,0.18)"; ctx.fillRect(tx, y + 2, 1, h - 3); } }   // vạch 10%
+  if (fw > 2) {   // vệt sáng lướt qua thanh mỗi ~3 giây
+    const sx = ((performance.now() / 1000) * 60) % (w + 120) - 20;
+    if (sx > 0 && sx < fw) { ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.fillRect(x + Math.round(sx), y, 3, h); ctx.fillRect(x + Math.round(sx) - 2, y, 1, h); }
+  }
+  if (glow > 0 && fw > 0) { ctx.fillStyle = `rgba(255,255,255,${glow * 0.5})`; ctx.fillRect(x + Math.max(0, fw - 6), y, Math.min(6, fw), h); }   // hồi: mép thanh lóe sáng
+  if (beat > 0) { ctx.fillStyle = `rgba(255,60,80,${beat * 0.35})`; ctx.fillRect(x, y, fw, h); }
   if (label) {
     ctx.textAlign = "center";
     text(ctx, label, x + w / 2, y + 1, "#ffffff");
@@ -199,7 +231,7 @@ export function drawBossBar(ctx, W, boss, time, y = 14) {
   ctx.font = "8px monospace"; ctx.textBaseline = "top"; ctx.textAlign = "center";
   text(ctx, boss.cfg.name, W / 2, y - 2, "#e0c8ff");
   ctx.textAlign = "left";
-  drawBar(ctx, x, y + 8, w, 5, boss.hp / boss.maxHp, Math.sin(time * 10) > 0.8 ? "#ff7ad8" : "#c048ff", "#e8b0ff", "");
+  drawBar(ctx, x, y + 8, w, 5, boss.hp / boss.maxHp, Math.sin(time * 10) > 0.8 ? "#ff7ad8" : "#c048ff", "#e8b0ff", "", { id: "boss", chip: "#ffffff" });
   if (boss.hp < boss.maxHp * 0.5) { ctx.fillStyle = "#ff3b3b"; ctx.fillRect(x + w - 2, y + 8, 2, 5); }   // nửa máu: Boss nổi điên
 }
 

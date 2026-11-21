@@ -672,6 +672,7 @@ export class Cabin {
   /** Đi lại TỰ DO: WASD / mũi tên / cần ảo (Shift chạy, tăng tốc mượt) · bấm/chạm sàn = tìm đường · E = tương tác */
   updateWalk(dt, input, canWalk, sound) {
     let dx = 0, dy = 0, ev = null, wantRun = false;
+    const wasPeeking = this.peeking;   // bấm E để THÔI nhìn cửa sổ thì không được mở lại ngay trong cùng khung hình
     if (input && canWalk) {
       const k = input.keys;
       if (k.has("w") || k.has("arrowup")) dy -= 1;
@@ -713,7 +714,7 @@ export class Cabin {
     this.moving = moved > WALK * dt * 0.3;
     this.near = null; let nd = 1e9;   // đứng gần điểm nào? (gần nhất)
     for (const [id, s] of Object.entries(CABIN_SPOTS)) { const d = Math.hypot(this.hx - s.x, this.hy - s.y); if (d < s.r && d < nd) { nd = d; this.near = id; } }
-    if (input && canWalk && !this.peeking && this.near && input.pressed.has("e")) ev = this.near;
+    if (input && canWalk && !wasPeeking && this.near && input.pressed.has("e")) ev = this.near;
     if (ev && ev !== "gear" && ev !== "door") { this.interact(ev, sound); ev = null; }
     return ev;
   }

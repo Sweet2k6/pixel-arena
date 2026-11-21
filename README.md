@@ -4,6 +4,22 @@ Game đấu trường sinh tồn pixel art 2D (HTML5 Canvas + JavaScript thuần
 
 **▶ Chơi ngay:** https://sweet2k6.github.io/pixel-arena/
 
+## Bản 6.0.1 — MÁU CHÂN THẬT HƠN · sửa lỗi
+- **Máu phun** theo hướng đạn mỗi lần trúng đòn (chí mạng / gục ngã phun nhiều hơn): giọt bay vòng cung rồi **rơi xuống thành giọt loang** có đuôi chỉ hướng bay.
+- **Vết văng có hướng** (8 hướng): tâm loang không đều, giọt nhỏ dần ra xa, giọt to hình giọt nước; **vũng máu loang dần** dưới xác; xác trượt trên nền để lại **vệt kéo lê**.
+- Máu tươi có **ánh ướt**, vài giây sau **khô lại sẫm màu**, rồi mờ dần. Màu theo loại quái: đỏ (zombie, người), dịch xanh (zombie phun độc, ếch, rắn), chất nhầy (slime), tím (mắt quỷ, vua slime, hồn ma tím), mảnh xương (bộ xương).
+- Vết máu **không in đè lên tường / bao cát / hố** (tự cắt phần chồm lên); giọt rơi trúng tường thì không để vết; xác văng vào tường thì dừng lại.
+- Sửa: **màn hình đen kịt khi thả dù** (vòng tròn mở màn không chạy trong lúc thả dù) · trong khoang bấm E để thôi nhìn cửa sổ bị mở lại ngay.
+- Chỉnh nhanh trong `src/juice.js`: `BLOOD_FX` (số giọt), `DECAL_CFG` (số vết, thời gian khô / mờ), `STAIN` (màu máu).
+
+## Có gì mới ở bản 6.0 — ĐẠI NÂNG CẤP HÌNH ẢNH & HOẠT ẢNH (giữ nguyên lối chơi)
+- **Hoạt ảnh nhân vật + zombie mới** (`src/chibi.js`, mọi nhân vật chibi nướng lại): đứng yên thì **thở** (thân hạ, đầu hạ trễ 1 nhịp) và **chớp mắt**; chạy thì người đổ về trước, **tay sau vung**, đầu nảy theo quán tính, tóc / lông mũ / khăn / mũ trùm bay; thêm hàng **TRÚNG ĐÒN** (đầu bật ngửa, mắt nhắm "> <", miệng há).
+- **Cảm giác đánh** (`src/juice.js`): quái trúng đạn **giật người + bật lùi + méo người** (lò xo); zombie & quái đi bộ **chui lên từ đất** (đất văng), quái bay hiện dần; quái chết **chớp trắng, văng theo hướng đạn, NGÃ GỤC** (slime / dơi / ma thì **bẹp dí**), nằm lại rồi chìm dần; để lại **vết máu đỏ sẫm / dịch xanh / mảnh xương** trên nền; vụ nổ để lại **vết cháy sém**. Người chơi cũng méo người khi lướt / tiếp đất / trúng đòn, có dáng trúng đòn. Mọi nhân vật & quái có **bóng dưới chân**.
+- **Đạn quái phát sáng**: quả cầu có quầng sáng + lõi trắng + phập phồng + **vệt đuôi**; cầu lửa có tàn lửa, axit nhỏ giọt, cầu phép có tia lấp lánh (thay cho ô vuông phẳng). **Lửa đầu nòng** mới: tia sáng dài theo hướng ngắm + 2 tia chéo.
+- **Thanh Máu / Giáp / Năng Lượng**: mất thì hiện **vệt sát thương** rồi tụt dần, hồi thì dâng lên + lóe sáng, vạch chia 10%, ánh sáng lướt; **sắp chết thì tim đập + thanh nhấp nháy đỏ** theo nhịp tim.
+- **Chuyển cảnh**: vào trận / tiếp đất sau nhảy dù = **vòng tròn mở ra**; gục ngã = nhân vật **ngã xuống thành xác**, cả trận đứng hình, màn hình **khép vòng tròn** quanh xác.
+- Chỉnh nhanh: `CORPSE_CFG`, `DECAL_CFG`, `BLOOD` trong `src/juice.js` · dáng đi / thở / chớp mắt: `CHIBI_ANIMS` trong `src/chibi.js`.
+
 ## Có gì mới ở bản 5.5 — KHOANG MÁY BAY MỚI: RỘNG, CHI TIẾT, ĐI LẠI TỰ DO
 - **Khoang C-130 dài 1120px** (gấp 2.3 màn hình), **camera trượt theo** nhân vật, có lớp tiền cảnh trôi nhanh hơn tạo chiều sâu. Từ mũi tới đuôi: **buồng lái** (2 phi công, kính lớn nhìn ra trời lửa, radar quét, đường chân trời nghiêng theo máy bay, đồng hồ rung kim, đèn cảnh báo) · **vách ngăn** (rìu cứu hộ, dưỡng khí) · **khu tổ lái** (bàn bộ đàm có máy hiện sóng, màn hình nhiệm vụ đếm ngược, mũ treo móc, **bàn bản đồ** có đèn treo đung đưa + cốc cà phê bốc khói, **lính ngủ gật** Zzz) · **khoang hàng** (giá súng ARMORY, dù treo, lưới hàng, thùng đạn = TRANG BỊ, thùng phuy) · **đuôi** (**chỉ huy nhảy dù** giơ tay hô "ĐI! ĐI! ĐI!" khi đèn xanh, cửa JUMP, dốc sau thủy lực, đèn đỏ quay).
 - **Đi lại tự do**: WASD / mũi tên / cần ảo, tăng tốc mượt, giữ <kbd>Shift</kbd> để chạy. **Bấm / chạm sàn** = nhân vật tự tìm đường vòng qua đồ vật (A*). Đồ vật vẽ theo **chiều sâu**: đi ra sau bàn / thùng hàng thì bị che.

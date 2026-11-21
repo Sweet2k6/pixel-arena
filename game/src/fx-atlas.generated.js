@@ -256,9 +256,9 @@ export const ATLAS = {
  "actor:gunner": {
   "src": "assets/images/actors/gunner.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -275,11 +275,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -332,16 +348,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -358,6 +411,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -365,9 +425,9 @@ export const ATLAS = {
  "actor:monk": {
   "src": "assets/images/actors/monk.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -384,11 +444,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -441,16 +517,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -467,6 +580,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -474,9 +594,9 @@ export const ATLAS = {
  "actor:mage": {
   "src": "assets/images/actors/mage.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -493,11 +613,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -550,16 +686,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -576,6 +749,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -583,9 +763,9 @@ export const ATLAS = {
  "actor:archer": {
   "src": "assets/images/actors/archer.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -602,11 +782,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -659,16 +855,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -685,6 +918,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -692,9 +932,9 @@ export const ATLAS = {
  "actor:knight": {
   "src": "assets/images/actors/knight.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -711,11 +951,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -768,16 +1024,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -794,6 +1087,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1169,9 +1469,9 @@ export const ATLAS = {
  "actor:paladin": {
   "src": "assets/images/actors/paladin.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1188,11 +1488,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1245,16 +1561,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1271,6 +1624,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1278,9 +1638,9 @@ export const ATLAS = {
  "actor:ranger": {
   "src": "assets/images/actors/ranger.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1297,11 +1657,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1354,16 +1730,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1380,6 +1793,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1387,9 +1807,9 @@ export const ATLAS = {
  "actor:necro": {
   "src": "assets/images/actors/necro.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1406,11 +1826,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1463,16 +1899,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1489,6 +1962,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1496,9 +1976,9 @@ export const ATLAS = {
  "actor:ninja": {
   "src": "assets/images/actors/ninja.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1515,11 +1995,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1572,16 +2068,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1598,6 +2131,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1605,9 +2145,9 @@ export const ATLAS = {
  "actor:shaman": {
   "src": "assets/images/actors/shaman.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1624,11 +2164,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1681,16 +2237,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1707,6 +2300,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1890,9 +2490,9 @@ export const ATLAS = {
  "actor:zWalker": {
   "src": "assets/images/actors/zombie-walker.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -1909,11 +2509,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -1966,16 +2582,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -1992,6 +2645,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -1999,9 +2659,9 @@ export const ATLAS = {
  "actor:zRunner": {
   "src": "assets/images/actors/zombie-runner.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -2018,11 +2678,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -2075,16 +2751,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -2101,6 +2814,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -2108,9 +2828,9 @@ export const ATLAS = {
  "actor:zBloater": {
   "src": "assets/images/actors/zombie-bloater.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -2127,11 +2847,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -2184,16 +2920,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -2210,6 +2983,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -2217,9 +2997,9 @@ export const ATLAS = {
  "actor:zBoss": {
   "src": "assets/images/actors/zombie-boss.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -2236,11 +3016,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -8
+     -10
     ],
     [
      4,
-     -8
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ],
+    [
+     4,
+     -10
+    ],
+    [
+     4,
+     -10
     ]
    ],
    [
@@ -2293,16 +3089,53 @@ export const ATLAS = {
     [
      7,
      -9
+    ]
+   ],
+   [
+    [
+     1,
+     -12
+    ],
+    [
+     0,
+     -10
+    ],
+    [
+     3,
+     -10
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -2319,6 +3152,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }
@@ -2326,9 +3166,9 @@ export const ATLAS = {
  "actor:tingo": {
   "src": "assets/images/actors/tingo.png",
   "width": 320,
-  "height": 132,
+  "height": 176,
   "cols": 8,
-  "rows": 3,
+  "rows": 4,
   "frameW": 40,
   "frameH": 44,
   "anchorX": 20,
@@ -2345,11 +3185,27 @@ export const ATLAS = {
     ],
     [
      4,
-     -6
+     -8
     ],
     [
      4,
-     -6
+     -7
+    ],
+    [
+     4,
+     -7
+    ],
+    [
+     4,
+     -7
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
     ]
    ],
    [
@@ -2402,16 +3258,53 @@ export const ATLAS = {
     [
      7,
      -7
+    ]
+   ],
+   [
+    [
+     1,
+     -10
+    ],
+    [
+     0,
+     -8
+    ],
+    [
+     3,
+     -8
     ]
    ]
   ],
   "anims": {
    "idle": {
     "row": 0,
-    "frames": 4,
-    "fps": 5,
+    "frames": 8,
+    "fps": 6,
     "loop": true,
-    "contact": []
+    "contact": [],
+    "seq": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ]
    },
    "run": {
     "row": 1,
@@ -2428,6 +3321,13 @@ export const ATLAS = {
     "frames": 4,
     "fps": 14,
     "loop": true,
+    "contact": []
+   },
+   "hurt": {
+    "row": 3,
+    "frames": 3,
+    "fps": 14,
+    "loop": false,
     "contact": []
    }
   }

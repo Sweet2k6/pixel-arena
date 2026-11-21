@@ -1,7 +1,7 @@
 // =====================================================================================
 //  NHÂN VẬT CHIBI KIỂU SOUL KNIGHT — đầu to, thân nhỏ, viền đậm, vẽ bằng code từng pixel
 //
-//  bakeChibi(spec) -> spritesheet 3 hàng: idle (4 frame) · run (8 frame) · skill (4 frame)
+//  bakeChibi(spec) -> spritesheet 4 hàng: idle (8 frame, thở + chớp mắt) · run (8 frame) · skill (4 frame) · hurt (3 frame)
 //  Mỗi bộ phận (chân, thân, tay, đầu, mũ...) là 1 "lớp" có viền riêng, tô sáng góc trên-trái và tối góc dưới-phải;
 //  vẽ chồng theo thứ tự sau -> trước nên chỗ đầu đè lên thân tự có đường viền ngăn cách như pixel art vẽ tay.
 //  File thuần JavaScript (không DOM): chạy được ở trình duyệt lẫn Node (game/tools/bake-sprites.mjs).
@@ -77,25 +77,44 @@ function compose(layers, rgba, W, H, ax, ay, outline = true) {
 //  TƯ THẾ theo frame: độ lệch của đầu / thân / chân / tay (pixel)
 // -------------------------------------------------------------------------------------
 export const CHIBI_ANIMS = {
-  idle: { frames: 4, fps: 5, pose: (i) => ({ bob: i >= 2 ? 1 : 0, lean: 0, legN: [0, 0], legF: [0, 0], armF: [0, 0], arm: [0, i >= 2 ? 1 : 0], tail: i }) },
+  // ĐỨNG: thở (thân hạ 1px, ĐẦU hạ trễ 1 nhịp = chuyển động theo quán tính), phụ kiện đung đưa chậm,
+  //       cột 7 = CHỚP MẮT; thứ tự `seq` cho chớp mắt ~3.5 giây/lần
+  idle: {
+    frames: 8, fps: 6, seq: [0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6],
+    pose: (i) => {
+      const k = i === 7 ? 0 : i, b = k >= 3 && k <= 5 ? 1 : 0, hb = k >= 4 && k <= 6 ? 1 : 0;
+      return { bob: b, hb, lean: 0, legN: [0, 0], legF: [0, 0], armF: [0, 0], arm: [0, 0], tail: k >> 1, eyes: i === 7 ? "closed" : "open" };
+    },
+  },
+  // CHẠY: người đổ về trước, chân sải, TAY SAU VUNG mạnh ngược chân, đầu nảy trễ 1 nhịp, tóc / lông / khăn bay
   run: {
     frames: 8, fps: 13, contact: [2, 6],
     pose: (i) => {
       const a = (i / 8) * Math.PI * 2, s = Math.sin(a), c = Math.cos(a);
+      const bobOf = (j) => (j % 4 === 1 || j % 4 === 3 ? -1 : 0);
       return {
-        bob: i % 4 === 1 || i % 4 === 3 ? -1 : 0, lean: 1,
+        bob: bobOf(i), hb: bobOf((i + 7) % 8), lean: 2,
         legN: [Math.round(3 * s), -Math.max(0, Math.round(2 * c))],
         legF: [Math.round(-3 * s), -Math.max(0, Math.round(-2 * c))],
-        armF: [Math.round(-2 * s), 0], arm: [0, 0], tail: i,
+        armF: [Math.round(-3.4 * s), -Math.round(Math.abs(s))], arm: [0, 0], tail: i, eyes: "open",
       };
     },
   },
   skill: {
     frames: 4, fps: 14,
-    pose: (i) => ({ bob: 1, lean: 3, legN: [4, -1 + (i % 2)], legF: [-5, -1], armF: [-3, 1], arm: [1, 0], tail: i * 2 }),
+    pose: (i) => ({ bob: 1, hb: i % 2, lean: 3, legN: [4, -1 + (i % 2)], legF: [-5, -1], armF: [-3, 1], arm: [1, 0], tail: i * 2, eyes: "open" }),
+  },
+  // TRÚNG ĐÒN: đầu bật ngửa ra sau, người giật lùi, tay văng, mắt nhắm tịt "> <" (dùng khi bị đánh + tư thế gục ngã)
+  hurt: {
+    frames: 3, fps: 14, loop: false,
+    pose: (i) => [
+      { bob: 0, hb: 0, lean: -2, hl: -1, legN: [1, 0], legF: [-2, 0], armF: [-3, -3], arm: [-2, -2], tail: 1, eyes: "pain" },
+      { bob: 1, hb: 1, lean: -3, hl: -1, legN: [2, 0], legF: [-3, -1], armF: [-4, -2], arm: [-3, -1], tail: 2, eyes: "pain" },
+      { bob: 0, hb: 1, lean: -1, hl: 0, legN: [1, 0], legF: [-1, 0], armF: [-2, 0], arm: [-1, 0], tail: 3, eyes: "closed" },
+    ][i],
   },
 };
-const ROWS = ["idle", "run", "skill"];
+const ROWS = ["idle", "run", "skill", "hurt"];
 
 /**
  * Vẽ 1 frame. look = { skin, hair, outfit, outfit2, pants, shoes, eyes, head: "knight" | "monk" | "wizard" | "skull" | "helm" | "zombie", accent, accent2, arms: "reach" (tay giơ thẳng), belly: màu bụng phình }
@@ -106,9 +125,9 @@ function drawFrame(look, P, W, H, ax, ay) {
   const skin = T(look.skin ?? "#ffd2a8"), outfit = T(look.outfit), outfit2 = T(look.outfit2 ?? look.outfit);
   const pants = T(look.pants ?? "#3a3f55"), shoes = T(look.shoes ?? "#26283a");
   const sole = look.sole ? T(look.sole) : null;            // đế giày khác màu (giày trắng đế xám)
-  const lean = P.lean, bob = P.bob;
+  const lean = P.lean, bob = P.bob, hbob = P.hb ?? bob, EY = P.eyes ?? "open";
   const SH = look.short ?? 0;                              // nhân vật LÙN: hạ thân + đầu xuống SH pixel (chân ngắn tũn)
-  const bodyY = -6 + bob + SH, headCY = -22 + bob + SH, hx = lean;   // tâm đầu
+  const bodyY = -6 + bob + SH, headCY = -22 + hbob + SH, hx = lean + (P.hl ?? 0);   // tâm đầu (nảy trễ hơn thân 1 nhịp)
 
   const reach = look.arms === "reach";   // ZOMBIE: 2 tay giơ thẳng ra trước
   // --- tay sau (khuất sau thân)
@@ -162,6 +181,14 @@ function drawFrame(look, P, W, H, ax, ay) {
   // --- ĐẦU (to!) + mặt + tóc / mũ
   const head = new Layer(), face = new Layer(), top = new Layer(), back = new Layer();
   face.noOutline = true;
+  /** Mắt NHẮM (vạch ngang) hoặc NHĂN ĐAU ("> <") thay cho mắt mở. xL / xR = mép trái 2 mắt, y = hàng trên, w x h = cỡ mắt */
+  const eyesShut = (xL, xR, y, w, h, col) => {
+    if (EY === "pain") {
+      const yc = y + Math.floor((h - 1) / 2);
+      face.set(xL, yc - 1, col); face.set(xL + 1, yc, col); face.set(xL, yc + 1, col);
+      face.set(xR + w - 1, yc - 1, col); face.set(xR + w - 2, yc, col); face.set(xR + w - 1, yc + 1, col);
+    } else { face.rect(xL, y + h - 1, w, 1, col); face.rect(xR, y + h - 1, w, 1, col); }
+  };
   if (look.cape) {   // áo choàng / khăn quàng sau lưng, bay phấp phới theo frame
     const capeC = T(look.cape), w = [0, 1, 2, 1][P.tail % 4];
     back.poly([[-5 + bx, bodyY - 9], [2 + bx, bodyY - 9], [-1 + bx - lean, -1], [-8 + bx - lean - w, 0], [-10 + bx - lean - w, -3]], capeC);
@@ -175,7 +202,8 @@ function drawFrame(look, P, W, H, ax, ay) {
     // kính che mặt tối có 2 mắt
     face.poly([[hx - 2, headCY - 2], [hx + 9, headCY - 3], [hx + 9, headCY + 3], [hx - 1, headCY + 3]], [20, 18, 32]);
     const ec = rgb(K === "knight" ? "#ffffff" : look.eyes ?? "#ffd34a");
-    face.rect(hx + 2, headCY - 1, 2, 2, ec); face.rect(hx + 6, headCY - 1, 2, 2, ec);
+    if (EY === "open") { face.rect(hx + 2, headCY - 1, 2, 2, ec); face.rect(hx + 6, headCY - 1, 2, 2, ec); }
+    else eyesShut(hx + 2, hx + 6, headCY - 1, 2, 2, ec);
     face.rect(hx - 8, headCY - 5, 1, 4, steel.hi);                      // ánh kim
     if (K === "knight") {   // chùm lông đỏ trên đỉnh, phất ra sau theo frame
       const plume = T(look.accent ?? "#ff4a3a"), w = P.tail % 2;
@@ -190,8 +218,8 @@ function drawFrame(look, P, W, H, ax, ay) {
     face.set(hx + 2, headCY - 1, [60, 18, 28]);
     const eyeC = rgb(look.eyes ?? "#ff2a2a");
     face.rect(hx + 6, headCY - 2, 3, 3, [30, 6, 10]);                       // mắt phải: đỏ phát sáng
-    face.rect(hx + 6, headCY - 1, 2, 2, eyeC);
-    face.set(hx + 6, headCY - 1, [255, 220, 200]);
+    if (EY === "open") { face.rect(hx + 6, headCY - 1, 2, 2, eyeC); face.set(hx + 6, headCY - 1, [255, 220, 200]); }
+    else face.rect(hx + 6, headCY, 3, 1, [255, 200, 190]);              // trúng đòn: mắt nheo lại thành vạch sáng
     face.set(hx + 5, headCY - 3, mixc(eyeC, skin.mid, 0.5));               // quầng sáng
     face.rect(hx + 2, headCY + 3, 8, 3, [18, 6, 12]);                       // miệng toạc
     face.set(hx + 3, headCY + 3, [214, 208, 176]); face.set(hx + 5, headCY + 3, [214, 208, 176]); face.set(hx + 8, headCY + 3, [214, 208, 176]);
@@ -224,7 +252,7 @@ function drawFrame(look, P, W, H, ax, ay) {
     head.oval(hcx, headCY, rx, ry, gold);
     face.poly([[hx + 1, headCY - 2], [hx + 9, headCY - 3], [hx + 9, headCY], [hx + 1, headCY + 1]], [24, 16, 20]);
     face.rect(hx + 4, headCY, 2, 4, [24, 16, 20]);
-    face.rect(hx + 2, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff")); face.rect(hx + 6, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff"));
+    if (EY === "open") { face.rect(hx + 2, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff")); face.rect(hx + 6, headCY - 1, 2, 1, rgb(look.eyes ?? "#7cf0ff")); }
     face.rect(hx - 8, headCY - 4, 1, 4, gold.hi);
     const wing = T(look.accent2 ?? "#ffffff"), w = P.tail % 2;
     back.poly([[hx - 7, headCY - 3], [hx - 14, headCY - 9 - w], [hx - 12, headCY - 4], [hx - 15, headCY - 4 + w], [hx - 8, headCY + 1]], wing);
@@ -235,8 +263,10 @@ function drawFrame(look, P, W, H, ax, ay) {
     const cloth = T(look.hair ?? "#24222e");
     head.oval(hcx, headCY, rx, ry, cloth);
     face.poly([[hx, headCY - 3], [hx + 9, headCY - 4], [hx + 9, headCY + 1], [hx, headCY + 1]], skin.mid);
-    face.rect(hx + 2, headCY - 2, 2, 2, [20, 14, 24]); face.rect(hx + 6, headCY - 2, 2, 2, [20, 14, 24]);
-    face.set(hx + 3, headCY - 2, [255, 255, 255]); face.set(hx + 7, headCY - 2, [255, 255, 255]);
+    if (EY === "open") {
+      face.rect(hx + 2, headCY - 2, 2, 2, [20, 14, 24]); face.rect(hx + 6, headCY - 2, 2, 2, [20, 14, 24]);
+      face.set(hx + 3, headCY - 2, [255, 255, 255]); face.set(hx + 7, headCY - 2, [255, 255, 255]);
+    } else eyesShut(hx + 2, hx + 6, headCY - 2, 2, 2, [20, 14, 24]);
     face.rect(hx, headCY + 1, 10, 1, cloth.lo);
     const band = T(look.accent ?? "#e8343f"), w = [0, 1, 0, -1][P.tail % 4];
     const bandL = new Layer();
@@ -248,8 +278,11 @@ function drawFrame(look, P, W, H, ax, ay) {
     // thợ săn: mũ trùm xanh rêu nhọn ra sau, mặt người, lông chim trên mũ
     head.oval(hcx, headCY, rx, ry, skin);
     const eye = rgb(look.eyes ?? "#1a1420");
-    face.rect(hx + 2, headCY, 2, 2, eye); face.rect(hx + 6, headCY, 2, 2, eye);
-    face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    if (EY === "open") {
+      face.rect(hx + 2, headCY, 2, 2, eye); face.rect(hx + 6, headCY, 2, 2, eye);
+      face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    } else eyesShut(hx + 2, hx + 6, headCY, 2, 2, eye);
+    if (EY === "pain") face.rect(hx + 4, headCY + 3, 2, 2, [70, 24, 30]);
     face.rect(hx + 1, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));
     face.rect(hx + 7, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));
     const hoodC = T(look.accent ?? "#3a6a34"), w = P.tail % 2;
@@ -263,9 +296,11 @@ function drawFrame(look, P, W, H, ax, ay) {
     // TÓC NGỐ (bát úp) bết mồ hôi xẹp xuống, mắt to sợ sệt, 2 RĂNG THỎ, giọt mồ hôi rơi
     head.oval(hcx, headCY, rx, ry - 0.5, skin);
     const white = [246, 244, 236], pupil = rgb(look.eyes ?? "#2a1a12");
-    face.rect(hx + 1, headCY - 1, 3, 3, white); face.rect(hx + 5, headCY - 1, 3, 3, white);     // tròng trắng to (sợ)
-    face.rect(hx + 2, headCY, 2, 2, pupil); face.rect(hx + 6, headCY, 2, 2, pupil);
-    face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    if (EY === "open") {
+      face.rect(hx + 1, headCY - 1, 3, 3, white); face.rect(hx + 5, headCY - 1, 3, 3, white);     // tròng trắng to (sợ)
+      face.rect(hx + 2, headCY, 2, 2, pupil); face.rect(hx + 6, headCY, 2, 2, pupil);
+      face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    } else eyesShut(hx + 1, hx + 5, headCY - 1, 3, 3, pupil);
     face.rect(hx + 3, headCY + 3, 5, 1, [70, 24, 30]);                                          // miệng hé
     face.rect(hx + 4, headCY + 4, 1, 2, white); face.rect(hx + 6, headCY + 4, 1, 2, white);     // 2 RĂNG THỎ
     face.set(hx + 4, headCY + 5, [208, 204, 192]); face.set(hx + 6, headCY + 5, [208, 204, 192]);
@@ -285,8 +320,11 @@ function drawFrame(look, P, W, H, ax, ay) {
     // đầu người: da mặt + tóc
     head.oval(hcx, headCY, rx, ry, skin);
     const eye = rgb(look.eyes ?? "#1a1420");
-    face.rect(hx + 2, headCY - 1, 2, 3, eye); face.rect(hx + 6, headCY - 1, 2, 3, eye);
-    face.set(hx + 2, headCY - 1, [255, 255, 255]); face.set(hx + 6, headCY - 1, [255, 255, 255]);
+    if (EY === "open") {
+      face.rect(hx + 2, headCY - 1, 2, 3, eye); face.rect(hx + 6, headCY - 1, 2, 3, eye);
+      face.set(hx + 2, headCY - 1, [255, 255, 255]); face.set(hx + 6, headCY - 1, [255, 255, 255]);
+    } else eyesShut(hx + 2, hx + 6, headCY - 1, 2, 3, eye);
+    if (EY === "pain") face.rect(hx + 4, headCY + 3, 2, 2, [70, 24, 30]);
     face.rect(hx + 1, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));   // má hồng
     face.rect(hx + 7, headCY + 3, 2, 1, mixc(skin.mid, [255, 110, 130], 0.45));
     // tóc phủ nửa trên + sau gáy
@@ -336,6 +374,9 @@ export function bakeChibi(look) {
   });
   return {
     rgba, width, height, cols, rows: ROWS.length, frameW: w, frameH: h, anchorX: ax, anchorY: ay, hands,
-    anims: Object.fromEntries(ROWS.map((n, i) => [n, { row: i, frames: CHIBI_ANIMS[n].frames, fps: CHIBI_ANIMS[n].fps, loop: true, contact: CHIBI_ANIMS[n].contact ?? [] }])),
+    anims: Object.fromEntries(ROWS.map((n, i) => {
+      const A = CHIBI_ANIMS[n];
+      return [n, { row: i, frames: A.frames, fps: A.fps, loop: A.loop !== false, contact: A.contact ?? [], ...(A.seq ? { seq: A.seq } : {}) }];
+    })),
   };
 }

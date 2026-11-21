@@ -24,6 +24,7 @@
 import { EnemyBullet } from "./weapons.js";
 import { Pool } from "./pool.js";
 import { angleDiff, rand, withAlpha, TAU, pointSegDist2 } from "./util.js";
+import { springStep, drawRise, drawShadow } from "./juice.js";
 
 /**
  * >>> TỐ CHẤT QUÁI TINH ANH <<<
@@ -211,6 +212,11 @@ export class Enemy {
     const p = game.player;
     this.spawnTime -= dt;
     this.flash -= dt;
+    // >>> JUICE: lò xo méo người, bật lùi tắt dần, dáng trúng đòn (đặt trong Game.damageEnemy)
+    if (this.sq || this.sqV) springStep(this, dt);
+    if (this.rk) { this.rk *= Math.exp(-22 * dt); if (this.rk < 0.2) this.rk = 0; }
+    if (this.hurtT > 0) this.hurtT -= dt;
+    if (this.hurtCD > 0) this.hurtCD -= dt;
     this.stateTime -= dt;
     this.freezeImm = Math.max(0, this.freezeImm - dt);
     const dx = p.cx - this.cx, dy = p.cy - this.cy;
@@ -279,6 +285,7 @@ export class Enemy {
     this.kx *= damp; this.ky *= damp;
 
     // --- Hoạt ảnh theo deltaTime ---
+    if (this.anim && this.hurtT > 0 && this.anim.anims.hurt) { this.anim.set("hurt"); this.anim.update(dt); return; }   // giật người khi trúng đạn
     if (this.anim) {
       if (this.cfg.zombie) {
         // zombie: chạy khi di chuyển, hàng "skill" (gồng người) khi gồng / gầm / nhảy / phun
@@ -709,11 +716,9 @@ export class Enemy {
   /** Vẽ dưới chân (trước khi vẽ nhân vật): bóng, vòng tinh anh, hào quang boss, vòng cảnh báo nơi tiếp đất */
   drawGround(c, game) {
     const x = Math.round(this.x), y = Math.round(this.y);
-    if (this.z > 0 || this.cfg.flying) {
-      c.fillStyle = "rgba(0,0,0,0.3)";
-      const w = Math.round(this.radius * 1.2 * (this.boss ? 1.4 : 1));
-      c.fillRect(x - w / 2, y - 1, w, 2);
-    }
+    // bóng dưới chân (quái bay / đang nhảy: bóng nhỏ + nhạt dần theo độ cao)
+    const air = this.cfg.flying ? 1 : this.z > 0 ? Math.min(1, this.z / 40) : 0;
+    drawShadow(c, x, y, this.radius * (this.boss ? 2.2 : 1.9) * (1 - air * 0.35), 0.32 - air * 0.12);
     if (this.elite) {
       const col = this.affixCfg.color;
       c.fillStyle = withAlpha(col, 0.28 + 0.18 * Math.sin(game.time * 8));
@@ -748,24 +753,38 @@ export class Enemy {
    * Chớp trắng khi trúng đòn = cùng ô đó trên bản tô trắng của sheet (tạo sẵn 1 lần).
    */
   draw(c, game) {
-    const x = Math.round(this.x), y = Math.round(this.y - this.z);
+    let x = Math.round(this.x), y = Math.round(this.y - this.z);
     if (!game.camera.inView(x, y, 90)) return;
     let flip = Math.cos(this.facing) < 0, s = (this.cfg.scale ?? 1) * this.sc;
     // Vua Slime nhún người khi chuẩn bị nhảy
     let sx = s, sy = s;
     if ((this.type === "slimeKing" || this.type === "zBoss") && this.state === "crouch") { sy = s * (0.85 + 0.05 * Math.sin(game.time * 30)); sx = s * 1.08; }
+    // >>> JUICE (src/juice.js): BẬT LÙI theo hướng đạn + MÉO NGƯỜI (lò xo: bè ngang -> vươn cao -> về dáng)
+    if (this.rk > 0.3) { x += Math.round(Math.cos(this.hitAng) * this.rk); y += Math.round(Math.sin(this.hitAng) * this.rk * 0.5); }
+    if (this.sq) { sx *= 1 + this.sq * 0.2; sy *= 1 - this.sq * 0.2; }
     const img = this.cfg.image ? game.assets.images[this.cfg.image] : null;
     if (img) {
       // >>> ẢNH QUÁI CỦA BẠN (1 ảnh tĩnh, IMAGE_MANIFEST trong main.js) — chân tại (x, y), quay mặt sang PHẢI
       c.save();
       c.translate(x, y);
       if (flip) c.scale(-1, 1);
-      c.drawImage(img, (-img.width * s) / 2, -img.height * s, img.width * s, img.height * s);
-      if (this.flash > 0) { c.globalAlpha = 0.6; c.globalCompositeOperation = "lighter"; c.drawImage(img, (-img.width * s) / 2, -img.height * s, img.width * s, img.height * s); }
+      c.drawImage(img, (-img.width * sx) / 2, -img.height * sy, img.width * sx, img.height * sy);
+      if (this.flash > 0) { c.globalAlpha = 0.6; c.globalCompositeOperation = "lighter"; c.drawImage(img, (-img.width * sx) / 2, -img.height * sy, img.width * sx, img.height * sy); }
       c.restore();
       return;
     }
     if (!this.sprite) return;
+    // >>> XUẤT HIỆN: zombie / quái đi bộ CHUI LÊN TỪ ĐẤT, quái bay hiện dần (0.35 giây đầu, lúc chưa gây sát thương)
+    const rise = this.spawnTime > 0 ? Math.min(1, Math.max(0, 1 - this.spawnTime / 0.35)) : 1;
+    if (rise < 1) {
+      const walker = !this.cfg.flying && this.sprite.kind === "chibi";
+      drawRise(c, x, y, rise, Math.round(30 * s), walker, (dx, dy) => this.drawBody(c, game, x + dx, y + dy, flip, s, sx, sy), this.serial ?? 0);
+      return;
+    }
+    this.drawBody(c, game, x, y, flip, s, sx, sy);
+  }
+  /** Thân quái tại (x, y): viền tinh anh + spritesheet (chớp trắng / đóng băng / gồng) + dáng lảo đảo / méo người */
+  drawBody(c, game, x, y, flip, s, sx, sy) {
     if (this.elite) {   // viền phát sáng theo màu tố chất (4 bản tô màu lệch 1px)
       const glow = this.sprite.sheet.tinted(this.affixCfg.color, 1);
       c.globalAlpha = 0.55 + 0.35 * Math.sin(game.time * 7 + this.serial);
@@ -773,13 +792,12 @@ export class Enemy {
       c.globalAlpha = 1;
     }
     const sheet = this.flash > 0 ? this.sprite.flash : this.freezeT > 0 ? this.sprite.frozen : this.state === "windup" || this.state === "cast" || this.state === "roar" ? this.sprite.hot : this.sprite.sheet;
-    if (sx !== sy) {
-      c.save(); c.translate(x, y); c.scale(sx / s, sy / s);
-      sheet.draw(c, this.anim.col, this.anim.row, 0, 0, flip, s);
-      c.restore();
-    } else if (this.cfg.zombie && this.moving && !this.boss) {
-      // dáng lảo đảo: nghiêng nhẹ qua lại quanh chân khi lê bước
-      c.save(); c.translate(x, y); c.rotate(Math.sin(game.time * 6 + this.serial * 1.7) * 0.07);
+    // dáng lảo đảo của zombie: nghiêng nhẹ qua lại quanh chân khi lê bước
+    const sway = this.cfg.zombie && this.moving && !this.boss ? Math.sin(game.time * 6 + this.serial * 1.7) * 0.07 : 0;
+    if (sx !== s || sy !== s || sway) {
+      c.save(); c.translate(x, y);
+      if (sway) c.rotate(sway);
+      c.scale(sx / s, sy / s);
       sheet.draw(c, this.anim.col, this.anim.row, 0, 0, flip, s);
       c.restore();
     } else sheet.draw(c, this.anim.col, this.anim.row, x, y, flip, s);

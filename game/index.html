@@ -17,7 +17,7 @@
        buộc phải tải bản mới, không dùng lại bản cũ trong bộ nhớ đệm.
        ============================================================================ -->
   <script>
-    window.GAME_VERSION = "5.5.0";
+    window.GAME_VERSION = "6.0.1";
     // Chạy trên máy nhà (Chay_Game.bat / localhost): luôn tải code mới nhất + tự tải lại khi có bản cập nhật
     window.DEV_LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
     if (window.DEV_LOCAL) window.GAME_VERSION += "-dev" + Date.now();
@@ -385,7 +385,7 @@
   <script>
     (function () {
       var CODE_FILES = [
-        "main.js", "fx-config.js", "characters.js", "src/actors.js", "src/ambient.js", "src/animation.js", "src/cabin.js", "src/cabinAudio.js", "src/ammo.js", "src/attachments.js",
+        "main.js", "fx-config.js", "characters.js", "src/actors.js", "src/ambient.js", "src/animation.js", "src/cabin.js", "src/cabinAudio.js", "src/juice.js", "src/ammo.js", "src/attachments.js",
         "src/chibi.js", "src/deploy.js", "src/effects.js", "src/enemies.js", "src/extractMap.js", "src/extraction.js",
         "src/fx-atlas.generated.js", "src/fxbake.js", "src/guns.js", "src/hordeAI.js", "src/hud.js", "src/lobby.js",
         "src/loot.js", "src/missions.js", "src/perks.js", "src/pool.js", "src/progress.js", "src/rarity.js",

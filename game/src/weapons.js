@@ -1209,6 +1209,32 @@ export class Bullet {
 // =====================================================================================
 //  ĐẠN CỦA QUÁI (tên, cầu tím, cầu lửa, axit...) — bị Kiếm Năng Lượng chém rụng
 // =====================================================================================
+// ------------------------------------------------------------------ ẢNH ĐẠN QUÁI PHÁT SÁNG (vẽ sẵn theo màu + cỡ)
+const ORB_CACHE = new Map();
+const hexRgb = (h) => { const v = parseInt(h.slice(1, 7), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
+function orbSprite(col, r) {
+  const key = `${col}|${r}`;
+  let cv = ORB_CACHE.get(key);
+  if (cv) return cv;
+  const R = Math.ceil(r) + 5, S = R * 2 + 1;
+  cv = document.createElement("canvas"); cv.width = cv.height = S;
+  const g = cv.getContext("2d");
+  const grd = g.createRadialGradient(R + 0.5, R + 0.5, 0, R + 0.5, R + 0.5, R + 0.5);
+  grd.addColorStop(0, withAlpha(col, 0.6)); grd.addColorStop(0.45, withAlpha(col, 0.25)); grd.addColorStop(1, withAlpha(col, 0));
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  const disc = (rad, fill) => {
+    g.fillStyle = fill;
+    for (let y = -Math.ceil(rad); y <= Math.ceil(rad); y++) { const w = Math.round(Math.sqrt(Math.max(0, rad * rad - y * y))); if (w > 0) g.fillRect(R - w + 1, R + y, w * 2 - 1, 1); }
+  };
+  const [cr, cg, cb] = hexRgb(col.startsWith("#") ? col : "#ff5a5a"), mix = (k) => `rgb(${Math.round(cr + (255 - cr) * k)},${Math.round(cg + (255 - cg) * k)},${Math.round(cb + (255 - cb) * k)})`;
+  disc(r + 1.2, "#0e0c14");          // viền tối
+  disc(r + 0.2, col);                // thân
+  disc(Math.max(1, r * 0.55), mix(0.6));   // lõi sáng
+  g.fillStyle = "#ffffff"; g.fillRect(R - Math.round(r * 0.4), R - Math.round(r * 0.4), Math.max(1, Math.round(r * 0.5)), Math.max(1, Math.round(r * 0.5)));   // điểm bóng
+  ORB_CACHE.set(key, cv);
+  return cv;
+}
+
 export class EnemyBullet {
   static obtain(x, y, angle, opts) { return EnemyBullet.pool.obtain().init(x, y, angle, opts); }
   init(x, y, angle, opts) {
@@ -1244,22 +1270,48 @@ export class EnemyBullet {
       else if (hit.kind === "prop") game.hitProp(hit.obj, 1, this.angle, false);
     }
   }
+  /**
+   * >>> ĐẠN QUÁI: quả cầu PHÁT SÁNG (quầng mềm + viền tối + lõi trắng, phập phồng) + 3 bóng mờ làm VỆT ĐUÔI.
+   *     cầu lửa: tàn lửa bay ngược · axit: nhỏ giọt · cầu phép: tia lấp lánh xoay. Ảnh mỗi cỡ / màu vẽ sẵn 1 lần (orbSprite).
+   */
   draw(c) {
-    c.save();
-    c.translate(Math.round(this.x), Math.round(this.y));
+    const x = Math.round(this.x), y = Math.round(this.y);
     if (this.style === "orb" || this.style === "fireball" || this.style === "acid") {
-      const r = this.radius + (Math.sin(this.age * 26) > 0 ? 1 : 0);
       const col = this.style === "fireball" ? "#ff8a2a" : this.style === "acid" ? "#8ad23a" : this.color;
-      c.fillStyle = withAlpha(col, 0.3); c.fillRect(-r - 2, -r - 2, (r + 2) * 2, (r + 2) * 2);
-      c.fillStyle = "#0e0c14"; c.fillRect(-r - 1, -r, r * 2 + 2, r * 2); c.fillRect(-r, -r - 1, r * 2, r * 2 + 2);
-      c.fillStyle = col; c.fillRect(-r, -r + 1, r * 2, r * 2 - 2); c.fillRect(-r + 1, -r, r * 2 - 2, r * 2);
-      c.fillStyle = this.style === "fireball" ? "#ffe26b" : "#ffffff"; c.fillRect(-1, -1, 2, 2);
-    } else {
-      c.rotate(this.angle);
-      c.fillStyle = "#6a4a2a"; c.fillRect(-8, -0.5, 10, 1);      // thân tên
-      c.fillStyle = "#e8e2d0"; c.fillRect(2, -1, 3, 2);           // mũi tên
-      c.fillStyle = "#c83a3a"; c.fillRect(-9, -2, 2, 1); c.fillRect(-9, 1, 2, 1); // lông đuôi
+      const spr = orbSprite(col, this.radius), R = (spr.width - 1) / 2;
+      const sp = Math.hypot(this.vx, this.vy) || 1, ux = this.vx / sp, uy = this.vy / sp;
+      for (let k = 3; k >= 1; k--) {   // vệt đuôi
+        const d = k * (this.radius + 1.6) * (this.style === "fireball" ? 1.35 : 1), s = 1 - k * 0.2, w = Math.max(2, Math.round(spr.width * s));
+        c.globalAlpha = 0.5 - k * 0.12;
+        c.drawImage(spr, Math.round(x - ux * d - w / 2), Math.round(y - uy * d - w / 2), w, w);
+      }
+      c.globalAlpha = 1;
+      const w = Math.round(spr.width * (1 + 0.12 * Math.sin(this.age * 22)));
+      c.drawImage(spr, Math.round(x - w / 2), Math.round(y - w / 2), w, w);
+      const r = this.radius;
+      if (this.style === "orb") {          // tia lấp lánh xoay quanh
+        const a = this.age * 9;
+        c.fillStyle = "#ffffff";
+        for (let i = 0; i < 2; i++) { const b = a + i * Math.PI; c.fillRect(Math.round(x + Math.cos(b) * (r + 3)), Math.round(y + Math.sin(b) * (r + 3)), 1, 1); }
+      } else if (this.style === "fireball") {   // tàn lửa văng ngược hướng bay
+        for (let i = 0; i < 3; i++) {
+          const u = (this.age * 6 + i / 3) % 1, d = r + 2 + u * 9;
+          c.fillStyle = u < 0.4 ? "#ffe26b" : "#ff6a1e";
+          c.fillRect(Math.round(x - ux * d + (i - 1) * uy * 2), Math.round(y - uy * d - (i - 1) * ux * 2), 1, 1);
+        }
+      } else {                                  // axit nhỏ giọt
+        const u = (this.age * 3) % 1;
+        c.fillStyle = withAlpha("#c8ff8a", 1 - u); c.fillRect(x, Math.round(y + r + u * 5), 1, 2);
+      }
+      return;
     }
+    c.save();
+    c.translate(x, y);
+    c.rotate(this.angle);
+    c.fillStyle = "rgba(255,240,220,0.18)"; c.fillRect(-16, -0.5, 9, 1);   // vệt gió sau mũi tên
+    c.fillStyle = "#6a4a2a"; c.fillRect(-8, -0.5, 10, 1);      // thân tên
+    c.fillStyle = "#e8e2d0"; c.fillRect(2, -1, 3, 2);           // mũi tên
+    c.fillStyle = "#c83a3a"; c.fillRect(-9, -2, 2, 1); c.fillRect(-9, 1, 2, 1); // lông đuôi
     c.restore();
   }
 }
