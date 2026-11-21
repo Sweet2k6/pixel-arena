@@ -3913,7 +3913,7 @@ class MenuUI {
     e.menu.classList.add("hidden"); e.xresult.classList.add("hidden"); e.gameover.classList.add("hidden");
     stage.classList.remove("in-game");
     e.cabin.classList.remove("hidden");
-    this.toggleKit(true, false);
+    this.toggleKit(false, false);   // khoang rộng: mặc định ẩn bảng để ngắm khoang, mở bằng Tab / nút / đứng cạnh thùng hàng bấm E
     this.setCabinCutscene(!!this.game.cabin.cutscene);
     this.renderCabin();
   }
@@ -3925,6 +3925,7 @@ class MenuUI {
   /** Bật / tắt bảng TRANG BỊ trong khoang (Tab · I · nút · đứng cạnh thùng hàng bấm E) */
   toggleKit(on = this.el.cabin.classList.contains("kit-off"), sound = true) {
     this.el.cabin.classList.toggle("kit-off", !on);
+    this.game.cabin.panel = on;   // camera đẩy nhân vật sang nửa trái khi bảng che nửa phải
     this.el.cabToggle.innerHTML = on ? "Ẩn trang bị <small>Tab</small>" : "Mở trang bị <small>Tab</small>";
     this.el.cabToggle.setAttribute("aria-pressed", String(on));
     if (sound) this.game.sound.play("uiSelect", 0.4);

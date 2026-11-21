@@ -212,6 +212,22 @@ export class CabinAudio {
     }
   }
 
+  /** BỘ ĐÀM: tiếng rè lúc lên lúc xuống + 2 tiếng bíp (~1.4 giây) */
+  radio(sound) {
+    if (!this.ok(sound)) return;
+    const ctx = this.n.ctx, t = ctx.currentTime + 0.02, v = CABIN_VOLUME.rattle, len = 1.4;
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1900; bp.Q.value = 1.4;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+    for (let k = 0; k < 14; k++) g.gain.linearRampToValueAtTime((0.05 + Math.random() * 0.12) * v, t + 0.05 + k * 0.095);
+    g.gain.linearRampToValueAtTime(0.0001, t + len);
+    this.shot(t, len + 0.1).connect(bp); bp.connect(g); g.connect(this.n.master);
+    for (const [dt, f] of [[0, 1320], [0.12, 990]]) {
+      const o = ctx.createOscillator(), og = ctx.createGain(); o.type = "square"; o.frequency.value = f;
+      og.gain.setValueAtTime(0.05 * v, t + dt); og.gain.setValueAtTime(0.0001, t + dt + 0.08);
+      o.connect(og); og.connect(this.n.master); o.start(t + dt); o.stop(t + dt + 0.1);
+    }
+  }
+
   stop() {
     clearInterval(this.timer); this.timer = 0;
     const n = this.n; this.n = null;
