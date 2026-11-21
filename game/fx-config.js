@@ -99,9 +99,9 @@ export const EFFECTS = {
   explosionSmall:{ src: "assets/images/fx/explosion-small.png",pixelfx: fxExplosion, options: { size: 0.45 }, bake: { fps: 20, maxTime: 1.6 }, play: { priority: 3 } },
   plasma:        { src: "assets/images/fx/plasma.png",         pixelfx: fxPlasma, bake: { fps: 20 }, play: { priority: 3 } },
   iceShatter:    { src: "assets/images/fx/ice-shatter.png",    pixelfx: fxIceShatter, bake: { fps: 24, maxTime: 1.6 }, play: { rotate: true, priority: 3 } },
-  // --- Đòn đánh thường Thanh Xuân: cụm gai băng mọc lên dọc đường băng (pixelfx ice/ice-spikes, rút ngắn tầm) ---
+  // --- Đòn đánh thường Bạch Ngưng Băng: cụm gai băng mọc lên dọc đường băng (pixelfx ice/ice-spikes, rút ngắn tầm) ---
   iceSpikes:     { src: "assets/images/fx/ice-spikes.png",     pixelfx: fxIceSpikes, options: { reach: 64, height: 48 }, bake: { fps: 20, maxTime: 1.2, variants: 2 }, play: { priority: 1 } },
-  // --- Tuyệt chiêu Ngại Ngùng (Thanh Xuân): băng + sét ---
+  // --- Tuyệt chiêu Ngại Ngùng (Bạch Ngưng Băng): băng + sét ---
   frostNova:     { src: "assets/images/fx/frost-nova.png",     pixelfx: fxFrostNova, bake: { fps: 18, maxTime: 1.3 }, play: { priority: 3 } },
   lightning:     { src: "assets/images/fx/lightning.png",      pixelfx: fxLightning, bake: { fps: 18, maxTime: 0.75, variants: 2 }, play: { priority: 3 } },
   zap:           { src: "assets/images/fx/zap.png",            pixelfx: fxZap, bake: { fps: 24 }, play: { priority: 2 } },
@@ -136,7 +136,7 @@ export const EFFECTS = {
 // =====================================================================================
 //  NHÂN VẬT & QUÁI (AnimationController)
 //    kind "chibi"   — nhân vật đầu to kiểu Soul Knight vẽ bằng code (src/chibi.js): 3 hàng idle / run / skill
-//    kind "sheet"   — SPRITESHEET CỦA BẠN (khối `spritesheet` trong characters.js, ví dụ Thanh Xuân)
+//    kind "sheet"   — SPRITESHEET CỦA BẠN (khối `spritesheet` trong characters.js, ví dụ Bạch Ngưng Băng)
 //    kind "critter" — quái pixelfx lặp (Slime, Dơi, Ma): 1 hàng "move"
 //    kind "hero"    — người pixel cao gầy kiểu cũ (bộ xương pixelfx), vẫn dùng được nếu muốn
 //

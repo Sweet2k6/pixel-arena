@@ -20,6 +20,11 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
         ".png": "image/png",
     }
 
+    def log_message(self, fmt, *args):
+        if "dev-live.txt" in (self.path or ""):
+            return   # trang tự hỏi file này mỗi 1.5 giây để tự tải lại — không in ra cho đỡ rối
+        super().log_message(fmt, *args)
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store, must-revalidate")
         self.send_header("Expires", "0")

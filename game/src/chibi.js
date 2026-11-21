@@ -10,7 +10,7 @@
 //      muốn sửa dáng chạy: CHIBI_ANIMS bên dưới.
 // =====================================================================================
 
-export const CHIBI_FRAME = { w: 40, h: 44, ax: 20, ay: 42 };   // cùng cỡ ô với spritesheet Thanh Xuân
+export const CHIBI_FRAME = { w: 40, h: 44, ax: 20, ay: 42 };   // cùng cỡ ô với spritesheet Bạch Ngưng Băng
 
 /** Đổi "#rrggbb" -> [r, g, b] ; làm sáng / tối */
 const rgb = (h) => { const v = parseInt(h.slice(1, 7), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
@@ -105,8 +105,10 @@ function drawFrame(look, P, W, H, ax, ay) {
   const T = (h) => tone(h);
   const skin = T(look.skin ?? "#ffd2a8"), outfit = T(look.outfit), outfit2 = T(look.outfit2 ?? look.outfit);
   const pants = T(look.pants ?? "#3a3f55"), shoes = T(look.shoes ?? "#26283a");
+  const sole = look.sole ? T(look.sole) : null;            // đế giày khác màu (giày trắng đế xám)
   const lean = P.lean, bob = P.bob;
-  const bodyY = -6 + bob, headCY = -22 + bob, hx = lean;   // tâm đầu
+  const SH = look.short ?? 0;                              // nhân vật LÙN: hạ thân + đầu xuống SH pixel (chân ngắn tũn)
+  const bodyY = -6 + bob + SH, headCY = -22 + bob + SH, hx = lean;   // tâm đầu
 
   const reach = look.arms === "reach";   // ZOMBIE: 2 tay giơ thẳng ra trước
   // --- tay sau (khuất sau thân)
@@ -120,7 +122,8 @@ function drawFrame(look, P, W, H, ax, ay) {
   const legF = new Layer(), legN = new Layer();
   const leg = (L, x, lift, robe) => {
     if (!robe) L.rect(x, -5 + lift + 1, 3, 4, pants);
-    L.rect(x, -2 + lift + 1, 4, 2, shoes);
+    if (sole) { L.rect(x, -3 + lift + 1, 4, 2, shoes); L.rect(x, -1 + lift + 1, 4, 1, sole); }   // giày cổ cao hơn 1px + đế
+    else L.rect(x, -2 + lift + 1, 4, 2, shoes);
   };
   leg(legF, -4 + P.legF[0], P.legF[1], look.robe);
   leg(legN, 0 + P.legN[0], P.legN[1], look.robe);
@@ -134,7 +137,14 @@ function drawFrame(look, P, W, H, ax, ay) {
     body.oval(bx + 3, bodyY - 2, 8, 6, bc);
     body.set(bx + 5, bodyY - 4, bc.hi); body.set(bx + 6, bodyY - 3, bc.hi); body.set(bx + 2, bodyY, bc.lo);
   }
+  if (look.vest) {   // áo giáp chiến thuật: tấm giáp ngực tối + 2 túi đạn + túi hông
+    const v = T(look.vest), pc = T(look.pouch ?? "#5c5638");
+    body.poly([[-5 + bx, bodyY - 9], [5 + bx, bodyY - 9], [6 + bx, bodyY - 2], [-6 + bx, bodyY - 2]], v);
+    body.rect(-3 + bx, bodyY - 6, 3, 3, pc); body.rect(1 + bx, bodyY - 6, 3, 3, pc);
+    body.set(-2 + bx, bodyY - 6, pc.hi); body.set(2 + bx, bodyY - 6, pc.hi);
+  }
   if (look.belt) body.rect(-6 + bx, bodyY - 2, 12, 1, T(look.belt));
+  if (look.vest) { const pc = T(look.pouch ?? "#5c5638"); body.rect(-7 + bx, bodyY - 1, 3, 3, pc); }
   if (look.chest) body.rect(-1 + bx, bodyY - 8, 2, 4, T(look.chest));
   // --- tay trước (cầm vũ khí) — bàn tay da
   const arm = new Layer();
@@ -249,6 +259,28 @@ function drawFrame(look, P, W, H, ax, ay) {
     const feather = new Layer();
     feather.poly([[hx + 2, headCY - 9], [hx + 6, headCY - 15 - w], [hx + 4, headCY - 9]], T(look.accent2 ?? "#e8343f"));
     top.extra = feather;
+  } else if (K === "bowl") {
+    // TÓC NGỐ (bát úp) bết mồ hôi xẹp xuống, mắt to sợ sệt, 2 RĂNG THỎ, giọt mồ hôi rơi
+    head.oval(hcx, headCY, rx, ry - 0.5, skin);
+    const white = [246, 244, 236], pupil = rgb(look.eyes ?? "#2a1a12");
+    face.rect(hx + 1, headCY - 1, 3, 3, white); face.rect(hx + 5, headCY - 1, 3, 3, white);     // tròng trắng to (sợ)
+    face.rect(hx + 2, headCY, 2, 2, pupil); face.rect(hx + 6, headCY, 2, 2, pupil);
+    face.set(hx + 2, headCY, [255, 255, 255]); face.set(hx + 6, headCY, [255, 255, 255]);
+    face.rect(hx + 3, headCY + 3, 5, 1, [70, 24, 30]);                                          // miệng hé
+    face.rect(hx + 4, headCY + 4, 1, 2, white); face.rect(hx + 6, headCY + 4, 1, 2, white);     // 2 RĂNG THỎ
+    face.set(hx + 4, headCY + 5, [208, 204, 192]); face.set(hx + 6, headCY + 5, [208, 204, 192]);
+    face.rect(hx, headCY + 2, 1, 1, mixc(skin.mid, [255, 110, 130], 0.4)); face.rect(hx + 8, headCY + 2, 1, 1, mixc(skin.mid, [255, 110, 130], 0.4));
+    const dy = P.tail % 4;   // giọt mồ hôi chảy xuống thái dương
+    face.set(hx - 2, headCY + dy - 1, [170, 220, 255]); face.set(hx - 2, headCY + dy, [110, 180, 245]);
+    // tóc bát úp: đỉnh BẸT (không phồng), mái cắt ngang phủ trán tới sát mắt, mép mái lởm chởm từng lọn bết
+    top.poly([[hx - 9.4, headCY + 4], [hx - 9.8, headCY - 3], [hx - 8, headCY - 6.8], [hx - 3, headCY - 7.8], [hx + 4, headCY - 7.8], [hx + 8, headCY - 6.8], [hx + 10.5, headCY - 4],
+      [hx + 10.5, headCY - 2], [hx + 9, headCY - 2], [hx + 8, headCY - 1], [hx + 7, headCY - 2], [hx + 5, headCY - 2], [hx + 4, headCY - 1], [hx + 3, headCY - 2],
+      [hx + 1, headCY - 2], [hx, headCY - 1], [hx - 1, headCY - 2], [hx - 3, headCY - 1], [hx - 4, headCY + 3], [hx - 6, headCY + 5]], hairC);
+    const shine = mixc(hairC.mid, [150, 170, 200], 0.55), clump = mixc(hairC.mid, [0, 0, 0], 0.45);
+    const shineL = new Layer(); shineL.noOutline = true;
+    for (const [x, y] of [[-6, -6], [-5, -6], [-4, -7], [-3, -7], [2, -7], [3, -7], [5, -6], [-8, -3], [-8, -2], [-7, -1]]) shineL.set(hx + x, headCY + y, shine);   // vệt bóng dầu (bết)
+    for (const [x, y] of [[2, -3], [6, -3], [-1, -3], [9, -3], [2, -4], [6, -4]]) shineL.set(hx + x, headCY + y, clump);                  // lọn bết dính trán
+    top.extra = shineL;
   } else {
     // đầu người: da mặt + tóc
     head.oval(hcx, headCY, rx, ry, skin);

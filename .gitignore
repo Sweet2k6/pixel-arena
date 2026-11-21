@@ -10,3 +10,5 @@ node_modules/
 *.log
 Thumbs.db
 desktop.ini
+# File tự đổi mỗi lần cập nhật để trang tự tải lại khi chạy trên máy (không cần đẩy lên GitHub)
+game/dev-live.txt

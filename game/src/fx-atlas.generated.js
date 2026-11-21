@@ -2322,5 +2322,114 @@ export const ATLAS = {
     "contact": []
    }
   }
+ },
+ "actor:tingo": {
+  "src": "assets/images/actors/tingo.png",
+  "width": 320,
+  "height": 132,
+  "cols": 8,
+  "rows": 3,
+  "frameW": 40,
+  "frameH": 44,
+  "anchorX": 20,
+  "anchorY": 42,
+  "hands": [
+   [
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -8
+    ],
+    [
+     4,
+     -6
+    ],
+    [
+     4,
+     -6
+    ]
+   ],
+   [
+    [
+     5,
+     -8
+    ],
+    [
+     5,
+     -9
+    ],
+    [
+     5,
+     -8
+    ],
+    [
+     5,
+     -9
+    ],
+    [
+     5,
+     -8
+    ],
+    [
+     5,
+     -9
+    ],
+    [
+     5,
+     -8
+    ],
+    [
+     5,
+     -9
+    ]
+   ],
+   [
+    [
+     7,
+     -7
+    ],
+    [
+     7,
+     -7
+    ],
+    [
+     7,
+     -7
+    ],
+    [
+     7,
+     -7
+    ]
+   ]
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "fps": 5,
+    "loop": true,
+    "contact": []
+   },
+   "run": {
+    "row": 1,
+    "frames": 8,
+    "fps": 13,
+    "loop": true,
+    "contact": [
+     2,
+     6
+    ]
+   },
+   "skill": {
+    "row": 2,
+    "frames": 4,
+    "fps": 14,
+    "loop": true,
+    "contact": []
+   }
+  }
  }
 };

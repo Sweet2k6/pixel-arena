@@ -55,6 +55,9 @@ import { Chest, Pickup, ExpOrb, Drop, rollChest, CHEST_TIERS } from "./src/loot.
 import { RARITY_ORDER, rarityColor, rarityName } from "./src/rarity.js";
 import { Progress, UPGRADES, CRAFT_COST, gemsForRun } from "./src/progress.js";
 import { Lobby } from "./src/lobby.js";
+import { Cabin, CABIN_IMAGES, CABIN_ETA } from "./src/cabin.js";
+import { ATTACHMENTS, ATTACH_SLOTS, hdGunUrl } from "./src/attachments.js";   // phụ kiện + ảnh súng chi tiết (Kho Vũ Khí)
+import { AMMO, AMMO_TYPES, AMMO_DROP, ammoTypeOf, startAmmoPool, stopAmmoPool, addAmmo, rollAmmoType } from "./src/ammo.js";   // đạn theo loại (Rút Quân)   // khoang máy bay: sảnh chờ trước khi nhảy dù (Rút Quân)
 import { Merchant, GodStatue, STATUE } from "./src/shop.js";
 import { rollPerks, expToNext, PERK_ICONS, Mods, RARITY, PERK_BY_ID, ABSORB_EVERY, VAMP_EVERY } from "./src/perks.js";
 import { LightLayer, Ambient, makeVignette } from "./src/ambient.js";
@@ -65,7 +68,7 @@ import { EffectManager } from "./src/effects.js";
 import { loadSprites } from "./src/animation.js";
 import { sweep, sweepLife } from "./src/pool.js";
 import { SpatialGrid } from "./src/spatial.js";
-import { GUN_IMAGES, prepareGunSprites, updateGunFx, drawGunFx } from "./src/guns.js";
+import { GUN_IMAGES, prepareGunSprites, updateGunFx, drawGunFx, gunFlash } from "./src/guns.js";
 // --- bản 5.0: chế độ NHẢY DÙ – NHIỆM VỤ – RÚT QUÂN ---
 import { ExtractionWorld } from "./src/extractMap.js";          // bản đồ chiến thuật 3200x2240, 4 khu
 import { HordeManager } from "./src/hordeAI.js";                // zombie tuần tra theo đàn 5–6 con
@@ -84,6 +87,7 @@ const ARCADE_WORLD = { w: 2400, h: 1600 };
 /** Trạng thái chính của game. (Tạm dừng / chọn thẻ là cờ bên trong PLAYING.) */
 const GAME_STATE = Object.freeze({
   MENU: "MENU",           // SẢNH CHỜ: căn phòng đi lại, đổi nhân vật, nâng cấp, chọn bản đồ
+  CABIN: "CABIN",         // KHOANG MÁY BAY (Rút Quân): chọn đồ mang theo trước khi nhảy dù
   PLAYING: "PLAYING",     // Đang chiến đấu
   GAME_OVER: "GAME_OVER", // Thua cuộc
 });
@@ -209,6 +213,7 @@ for (const [name, cfg] of Object.entries(ACTORS)) if (cfg.src) IMAGE_MANIFEST[`a
 Object.assign(IMAGE_MANIFEST, GUN_IMAGES);
 // Ảnh chế độ Rút Quân (máy bay, dù, trực thăng, hòm đồ, pháo sáng...) & icon vật phẩm — để "" thì game tự vẽ
 Object.assign(IMAGE_MANIFEST, EXTRACT_IMAGES, ITEM_IMAGES);
+if (CABIN_IMAGES.background) IMAGE_MANIFEST["cabin:bg"] = CABIN_IMAGES.background;   // ảnh nền khoang máy bay của bạn (src/cabin.js)
 
 const SOUND_MANIFEST = {
   // >>> CHÈN FILE ÂM THANH (.mp3 / .wav / .ogg)
@@ -223,7 +228,7 @@ const SOUND_MANIFEST = {
   arrow: "",         // Cung Thủ Xương bắn
   batArm: "",        // Dơi Cảm Tử chuẩn bị nổ
   iceBreak: "",      // tinh thể băng vỡ
-  iceShot: "", freeze: "", shyCast: "", thunder: "",   // Thanh Xuân: gai băng, đóng băng, Ngại Ngùng, sét
+  iceShot: "", freeze: "", shyCast: "", thunder: "",   // Bạch Ngưng Băng: gai băng, đóng băng, Ngại Ngùng, sét
   bossWarn: "", bossShoot: "", bossCharge: "", bossSlam: "",
   // --- Vũ khí mới (bản 3.0) ---
   poison: "", disc: "", scythe: "", sniper: "", rocket: "", meteorCast: "", meteor: "", hammer: "", bow: "", soul: "", shuriken: "",
@@ -595,6 +600,10 @@ function fitCanvas() {
 }
 window.addEventListener("resize", fitCanvas);
 window.addEventListener("orientationchange", () => setTimeout(fitCanvas, 250));
+document.addEventListener("fullscreenchange", () => setTimeout(fitCanvas, 60));
+// Điện thoại: lần chạm đầu (ngay ở SẢNH, không đợi vào trận) -> bật toàn màn hình + khóa ngang để game phủ kín màn hình.
+// Dùng "touchend" vì trình duyệt chỉ cho mở toàn màn hình trong sự kiện kết thúc chạm. Lỡ thoát ra thì chạm lại là vào lại.
+window.addEventListener("touchend", () => { enableTouchMode(); goFullscreenLandscape(); }, { passive: true });
 window.visualViewport?.addEventListener("resize", fitCanvas);
 if (TOUCH) document.body.classList.add("is-touch");
 fitCanvas();
@@ -603,6 +612,7 @@ fitCanvas();
 // 6. ICON KỸ NĂNG (pixel) — dùng khi chưa chèn ảnh icon
 // =====================================================================================
 const SKILL_ICON_BITMAPS = {
+  panic: [".#..*..#..", "..#.*.#...", "#..***..#.", ".#*#o#*#..", "**#ooo#***", ".#*#o#*#..", "#..***..#.", "..#.*.#...", ".#..*..#..", ".........."],
   rage: ["....#.....", "...##...#.", "..###..##.", "..####.##.", ".#####o##.", ".##o##oo#.", "##oo#ooo##", "#oo*oo*oo#", ".#o****o#.", "..######.."],
   dash: ["#....#....", "##...##...", "o##..o##..", ".o##..o##.", "..*##..*##", "..*##..*##", ".o##..o##.", "o##..o##..", "##...##...", "#....#...."],
   nova: ["....**....", ".#..oo..#.", "..#.oo.#..", "...oooo...", "*oooo*ooo*", "*ooo*oooo*", "...oooo...", "..#.oo.#..", ".#..oo..#.", "....**...."],
@@ -654,7 +664,7 @@ const SKILL_HANDLERS = {
     game.shake(0.12, 2);
   },
   /**
-   * NGẠI NGÙNG (Thanh Xuân): ôm mặt ngại `duration` giây (bất tử, đứng yên). Trong lúc đó:
+   * NGẠI NGÙNG (Bạch Ngưng Băng): ôm mặt ngại `duration` giây (bất tử, đứng yên). Trong lúc đó:
    *   0.25s — sóng băng đóng băng mọi quái trên màn hình, xóa đạn của quái
    *   0.5s..hết — sét đánh xuống từng con (gần trước, xa sau): quái thường chết ngay,
    *               Tinh Anh mất `eliteDamage`, Boss mất `bossDamage` máu tối đa
@@ -669,6 +679,18 @@ const SKILL_HANDLERS = {
     game.sound.play("shyCast", 0.6);
     p.nextSkin(game);                 // mỗi lần dùng tuyệt chiêu: gốc -> hoodie -> gốc ...
     game.banner("Ư... ngại quá đi mất!", "#ff8fc0");
+  },
+  /** HOẢNG LOẠN XẢ ĐẠN (Minh Huy): `duration` giây xả `count` viên theo hướng ngẫu nhiên, hất lùi quái sát bên, đi chậm */
+  panic(p, game, s) {
+    p.panic = { t: 0, dur: s.duration, acc: 0, skill: s };
+    p.castTime = ANIM_CFG.castTime;
+    for (const e of game.enemies) {
+      if (e.dead || (e.x - p.x) ** 2 + (e.y - p.y) ** 2 > 42 * 42) continue;
+      game.damageEnemy(e, 0.5, Math.atan2(e.cy - p.cy, e.cx - p.cx), 200, { quiet: true, noCrit: true });
+    }
+    game.sound.play("skillRage", 0.5);
+    game.shake(0.15, 2);
+    game.banner("Á Á Á! ĐỪNG LẠI GẦN!!", "#ffd27a");
   },
   /** BÃO CẦU NĂNG LƯỢNG: bắn `count` viên tỏa đều 360 độ */
   nova(p, game, s) {
@@ -803,7 +825,7 @@ class Player {
     this.moveSpeed = 0;                   // tốc độ thực tế (px/giây) đo từ vị trí -> chọn Idle / Run
     this.moveDir = 1;                     // hướng chạy ngang (bụi bay ngược lại)
     this.castTime = 0;                    // đang giữ dáng tung kỹ năng
-    this.shy = null;                      // đang Ngại Ngùng (tuyệt chiêu Thanh Xuân)
+    this.shy = null;                      // đang Ngại Ngùng (tuyệt chiêu Bạch Ngưng Băng)
     // --- VŨ KHÍ TRÊN TAY ---
     this.handX = this.x; this.handY = this.y - 19;   // vị trí bàn tay (tọa độ thế giới), cập nhật mỗi frame
     this.recoil = 0;                      // px giật lùi theo nòng (âm = đâm tới trước)
@@ -829,7 +851,7 @@ class Player {
   get cy() { return this.y - 17; }
   get facingLeft() { return Math.cos(this.aim) < 0; }
   get invulnerable() { return this.hurtTimer > 0 || !!this.dash || this.rollInv > 0 || !!this.shy || this.holyTime > 0; }
-  get skillActive() { return this.rageTime > 0 || !!this.dash || !!this.shy || this.holyTime > 0; }
+  get skillActive() { return this.rageTime > 0 || !!this.dash || !!this.shy || this.holyTime > 0 || !!this.panic; }
   /** Hồi chiêu Lướt (Shift): nội tại nhân vật + thẻ Lướt Ảo Ảnh */
   get rollCdMax() { return ROLL.cooldown * (1 - (this.char.rollCut ?? 0)) * (1 - this.mods.dashCutC); }
   /** Hồi chiêu kỹ năng hiện tại (đã tính thẻ Bậc Thầy Kỹ Năng) */
@@ -871,7 +893,7 @@ class Player {
   get maskActor() { return (this.actor ??= this.sprite ? this.sprite.maskActor() : makeActor(this.char)); }
   get speed() {
     return this.baseSpeed * this.mods.speedMul * (this.frenzy > 0 ? 1.3 : 1) * (this.inAcid ? 1 - ENV.acid.slow : 1)
-      * (this.slowT > 0 ? 0.6 : 1) * (this.rootT > 0 ? 0.2 : 1);
+      * (this.slowT > 0 ? 0.6 : 1) * (this.rootT > 0 ? 0.2 : 1) * (this.panic ? 0.6 : 1);
   }
   /** Đầu nòng (tọa độ thế giới): từ bàn tay đi dọc hướng ngắm đúng bằng chiều dài vũ khí */
   get muzzle() {
@@ -899,6 +921,19 @@ class Player {
     for (const w of this.weapons) if (w) tickReload(w, dt, game);   // súng thật: đếm thời gian nạp đạn (cả khẩu đang cất)
     this.noEnergyT = Math.max(0, this.noEnergyT - dt);
     if (this.rageTime > 0) { this.rageTime -= dt; if (this.rageTime <= 0) { this.rageTime = 0; this.aura?.stop(); } }
+    if (this.panic) {   // Hoảng Loạn Xả Đạn: rải đạn đều trong thời gian hiệu lực, hướng ngẫu nhiên
+      const P = this.panic, s = P.skill, every = P.dur / s.count;
+      P.t += dt; P.acc += dt;
+      while (P.acc >= every && P.t <= P.dur + every) {
+        P.acc -= every;
+        const a = Math.random() * TAU;
+        game.bullets.push(Bullet.obtain(this.cx + Math.cos(a) * 6, this.cy + Math.sin(a) * 6, a, { speed: s.bulletSpeed * (0.85 + Math.random() * 0.3), damage: s.damage * this.mods.damageMul, radius: 2, color: s.color, knock: 60 }));
+        gunFlash(this.cx + Math.cos(a) * 9, this.cy + Math.sin(a) * 9, a, "small");   // lửa nòng lốp bốp theo từng viên
+        if (Math.random() < 0.3) game.ejectShell(this.cx, this.cy, a);
+        if (Math.random() < 0.35) game.sound.play("shoot", 0.25);
+      }
+      if (P.t >= P.dur) this.panic = null;
+    }
 
     // --- Ngắm: chuột (TỌA ĐỘ THẾ GIỚI) hoặc cần ngắm cảm ứng ---
     if (TOUCH) this.aim = this.touchAim(game);
@@ -1329,6 +1364,12 @@ class Player {
 
   hurt(game, fromX, fromY, dmg = 1) {
     if (this.invulnerable || this.hp <= 0) return;
+    if (this.char.dodge && Math.random() < this.char.dodge) {   // Minh Huy: nhỏ con, đòn sượt qua đầu
+      this.hurtTimer = 0.25;
+      effects.text("MISS", this.x, this.y - 30, "heal");
+      game.sound.play("swap", 0.35);
+      return;
+    }
     this.sinceHit = 0;
     this.hurtTimer = this.invulnTime;
     if (this.mods.thorns > 0) game.thornsBurst(this, 3 * this.mods.thorns);   // Giáp Gai: phản đòn
@@ -1503,6 +1544,36 @@ class Game {
   aimTarget(p) { return aimPoint(p); }
 
   // ---------------- Chuyển trạng thái ----------------
+  /** Nút "XUẤT KÍCH" / "LÊN MÁY BAY" / "Chơi lại": Rút Quân -> vào KHOANG MÁY BAY trước; Giải Trí -> vào trận luôn */
+  launch(charIndex = this.charIndex) {
+    if (this.mode === "extract") return this.enterCabin(charIndex);
+    return this.start(charIndex);
+  }
+
+  /** KHOANG MÁY BAY: sảnh chờ trên máy bay — chọn đồ trong Kho bỏ vào Túi, rồi CHỌN ĐIỂM NHẢY */
+  enterCabin(charIndex = this.charIndex) {
+    this.charIndex = charIndex;
+    savePref("pixelArena.char", String(charIndex));
+    this.state = GAME_STATE.CABIN;
+    this.paused = false;
+    input.mouse.left = false;
+    input.pressed.clear();
+    this.ui.closePanels?.();
+    const char = CHARACTERS[charIndex], sp = ACTOR_SPRITES.get(char.id) ?? null;
+    this.cabin.enter({ sprite: sp, anim: sp?.controller() ?? null }, this.assets.images, !AUTOPLAY);   // có cảnh LÊN MÁY BAY
+    this.ui.showCabin();
+    this.sound.unlock();
+    goFullscreenLandscape();
+    this.sound.play("uiStart", 0.6);
+    this.sound.setMusic("menuMusic");
+  }
+  /** Từ khoang: nhảy dù -> lấy đồ khỏi Kho, mở bản đồ chiến thuật */
+  jumpFromCabin() {
+    if (this.state !== GAME_STATE.CABIN) return;
+    this.ui.hideCabin();
+    this.startExtraction(this.charIndex);
+  }
+
   start(charIndex = this.charIndex) {
     if (this.mode === "extract") return this.startExtraction(charIndex);
     this.charIndex = charIndex;
@@ -1549,7 +1620,7 @@ class Game {
   abortExtraction() { this.refundKit(); this.goMenu(); }
   refundKit() {
     const run = this.run;
-    if (run && run.phase === "tacmap") {
+    if (run && (run.phase === "tacmap" || run.phase === "jumpcut")) {
       for (const s of run.bag) if (s) this.stash.add(s.id, s.n);
       if (run.kitWeapon) this.stash.weapons.push(run.kitWeapon);
       this.stash.stats.runs = Math.max(0, this.stash.stats.runs - 1);
@@ -1587,10 +1658,11 @@ class Game {
   goMenu() {
     // rời trận Rút Quân giữa chừng = coi như tử trận (mất đồ mang theo)
     if (this.run && this.run.phase !== "done") {
-      if (this.run.phase === "tacmap") this.refundKit();
+      if (this.run.phase === "tacmap" || this.run.phase === "jumpcut") this.refundKit();
       else { this.run.fail("abandon"); this.stash.normalizeBag(); }
     }
     this.state = GAME_STATE.MENU;
+    this.ui.hideCabin?.();
     this.paused = false;
     this.choosing = false;
     this.shopping = null;
@@ -1649,6 +1721,11 @@ class Game {
     if (this.player.weapons[1]) this.player.weapons[1].crafted = true;   // vũ khí chế tạo bằng Ngọc: vĩnh viễn, không mang về Kho Đồ
     const kitW = extract && opts.kit?.weapon && WEAPONS[opts.kit.weapon.id];
     if (kitW) this.player.weapons[1] = makeWeapon(kitW, opts.kit.weapon.lvl ?? 1);   // súng mang từ Kho Đồ (mất nếu tử trận)
+    // ĐẠN THEO LOẠI: Rút Quân có kho đạn dự trữ (mỗi súng mang theo 2 băng) — Giải Trí vô hạn như cũ
+    if (extract) {
+      startAmmoPool(this.player.weapons.filter(Boolean));
+      AMMO.onEmpty = (w) => { const t = ammoTypeOf(w); this.banner(`Hết ${AMMO_TYPES[t]?.name ?? "đạn"}! Tìm hộp đạn hoặc đổi súng`, "#ff7a5a", false, 1.8); };
+    } else { stopAmmoPool(); AMMO.onEmpty = null; }
     this.camera = new Camera(W, H);
     this.camera.snap(this.player.x, this.player.cy);
     this.bullets = []; this.enemyBullets = []; this.enemies = [];
@@ -1784,7 +1861,7 @@ class Game {
     return pt;
   }
 
-  // ---------- ĐƯỜNG GAI BĂNG (đòn đánh thường Thanh Xuân) ----------
+  // ---------- ĐƯỜNG GAI BĂNG (đòn đánh thường Bạch Ngưng Băng) ----------
   /**
    * Băng lan dọc mặt đất từ chân nhân vật theo hướng ngắm, dài w.range px với tốc độ w.speed.
    * Cứ mỗi ICE_STEP px mọc 1 cụm gai (spritesheet "iceSpikes"); mọi quái trên đường bị trúng 1 lần + đóng băng.
@@ -1882,6 +1959,12 @@ class Game {
     for (let i = 0; i < n; i++) this.drops.push(Drop.obtain(c.x, c.y - 4, "gold", c.tier === "gold" ? 3 : 2));
   }
 
+  /** Thả 1 hộp đạn loại t (mặc định đủ 1 hộp, xem AMMO_TYPES[t].box) */
+  dropAmmo(x, y, t, n = AMMO_TYPES[t]?.box ?? 20) {
+    if (!AMMO_TYPES[t]) return;
+    this.pickups.push(new Pickup(x, y, "ammo", null, { vx: rand(-35, 35), vy: rand(-35, 35), ammo: { t, n } }));
+  }
+
   collectPickup(pk) {
     const p = this.player;
     pk.dead = true;
@@ -1895,6 +1978,7 @@ class Game {
       case "rage": p.frenzy = 8; break;
       case "maxUp": p.maxHp++; p.hp++; p.maxArmor++; p.armor++; break;
       case "weapon": msg = p.pickWeapon(pk.weapon, this); break;
+      case "ammo": { const a = pk.ammo, def = AMMO_TYPES[a.t]; addAmmo(a.t, a.n); msg = `+${a.n} ${def.name}`; break; }
     }
     this.banner(msg, pk.color);
     this.sound.play("pickup", 0.6);
@@ -1913,7 +1997,7 @@ class Game {
     // CHÍ MẠNG: x2 sát thương (tỉ lệ gốc của nhân vật + thẻ Mắt Đại Bàng + vũ khí)
     let crit = false;
     if (!opts.noCrit && !opts.quiet && Math.random() < p.mods.crit + (opts.critBonus ?? 0)) { crit = true; dmg *= 2; }
-    if (e.freezeT > 0 && p.char.frozenBonus) dmg *= 1 + p.char.frozenBonus;   // Thanh Xuân: Máu lạnh
+    if (e.freezeT > 0 && p.char.frozenBonus) dmg *= 1 + p.char.frozenBonus;   // Bạch Ngưng Băng: Máu lạnh
     // Khiên Hiệp Sĩ: đòn đến từ chính diện bị giảm 75%
     if (e.cfg.shieldArc && !opts.pierce && !opts.explosive) {
       const from = angle + Math.PI;   // hướng đòn đánh tới (nhìn từ quái)
@@ -1984,6 +2068,11 @@ class Game {
         if (Math.random() < GOLD.chance * luck * (e.minion ? 0.4 : 1)) this.drops.push(Drop.obtain(e.x, e.y - 6, "gold", e.cfg.exp >= 3 ? 2 : 1));
         if (Math.random() < ENERGY.orbChance * (e.minion ? 0.5 : 1)) this.drops.push(Drop.obtain(e.x, e.y - 6, "energy", ENERGY.orbValue));
       }
+    }
+    // Rút Quân: zombie rơi HỘP ĐẠN (ưu tiên đúng loại súng đang cầm; zombie to rơi nhiều hơn)
+    if (AMMO.pool && !e.minion) {
+      const big = e.boss || e.cfg.boss || e.cfg.deathBlast || e.elite;
+      if (Math.random() < (big ? AMMO_DROP.big : AMMO_DROP.zombie)) this.dropAmmo(e.x, e.y - 2, rollAmmoType(p.weapons.filter(Boolean), 0.8));
     }
     // rơi Tim hồi máu
     const hc = e.elite ? 0.3 : SPAWN.heartChance * (1 + p.mods.luck * 0.75);
@@ -2431,6 +2520,7 @@ class Game {
     if (input.pressed.has("l") && this.state === GAME_STATE.PLAYING) { this.light.enabled = !this.light.enabled; this.banner(this.light.enabled ? "Ánh sáng: BẬT" : "Ánh sáng: TẮT (nhẹ máy hơn)", "#b8b0d0"); }
     switch (this.state) {
       case GAME_STATE.MENU: effects.update(dt); return this.ui.updateMenu(dt);
+      case GAME_STATE.CABIN: return this.ui.updateCabin(dt, this.cabin.update(dt, this.sound, input, true));
       case GAME_STATE.GAME_OVER: return this.updateGameOver(dt);
       case GAME_STATE.PLAYING: return this.updatePlaying(dt);
     }
@@ -2464,7 +2554,7 @@ class Game {
       return;
     }
     // Rút Quân: bản đồ chiến thuật / đang thả dù
-    if (this.run && (this.run.phase === "tacmap" || this.run.phase === "airdrop")) return this.updateDeploy(dt);
+    if (this.run && (this.run.phase === "tacmap" || this.run.phase === "jumpcut" || this.run.phase === "airdrop")) return this.updateDeploy(dt);
     if (input.pressed.has("p") || input.pressed.has("escape")) this.paused = !this.paused;
     if (this.debug && input.pressed.has("j")) this.spawnHorde(50);   // thử tải: +50 quái
     if (TOUCH && isPortrait()) this.paused = true;   // cầm dọc điện thoại: tự tạm dừng, chờ xoay ngang
@@ -2638,9 +2728,21 @@ class Game {
     this.updateFx(dt);
     if (this.flashFx && (this.flashFx.t -= dt) <= 0) this.flashFx = null;
     if (run.phase === "tacmap") {
+      if (!AUTOPLAY) this.cabin.ambience(dt, this.sound);   // vẫn đang trên máy bay: giữ tiếng động cơ, gió, nổ
       const r = AUTOPLAY ? "jump" : run.tacmap.update(dt, input);
-      if (r === "jump") { run.beginAirdrop(run.tacmap.chosen); stage.classList.add("in-game"); this.sound.play("uiStart", 0.5); }
+      if (r === "jump") {
+        stage.classList.add("in-game"); this.sound.play("uiStart", 0.5);
+        if (AUTOPLAY) run.beginAirdrop(run.tacmap.chosen);
+        else { run.phase = "jumpcut"; run.jumpLZ = run.tacmap.chosen; this.cabin.startJump(); }   // CẢNH NHẢY KHỎI MÁY BAY trước khi thả dù
+      }
       else if (r === "back") this.abortExtraction();
+      return;
+    }
+    if (run.phase === "jumpcut") {
+      let ev = this.cabin.update(dt, this.sound, null, false);
+      const k = input.pressed;
+      if (!ev && this.cabin.seq?.t > 0.3 && (k.has("enter") || k.has(" ") || k.has("escape") || k.has("mouse0"))) ev = this.cabin.skip();
+      if (ev === "jumped") run.beginAirdrop(run.jumpLZ);
       return;
     }
     // đang thả dù: thế giới vẫn sống (đuốc, mây...), zombie đứng chờ
@@ -2681,6 +2783,8 @@ class Game {
     const p = this.player;
     if (t.kind === "weapon") {
       t.ref.dead = true;
+      const at = ammoTypeOf(t.ref.weapon);
+      if (AMMO.pool && at && !t.ref.ammoGiven) { t.ref.ammoGiven = true; addAmmo(at, t.ref.weapon.mag); }   // súng nhặt được kèm 1 băng dự trữ
       const msg = p.pickWeapon(t.ref.weapon, this);
       this.banner(msg, t.ref.color);
       this.sound.play("pickup", 0.6);
@@ -2891,9 +2995,11 @@ class Game {
   // ---------- DRAW ----------
   draw() {
     if (this.state === GAME_STATE.MENU) { this.lobby?.draw(ctx, { touch: TOUCH }); effects.draw(ctx, null, 0); effects.draw(ctx, null, 1); return; }
+    if (this.state === GAME_STATE.CABIN) { this.cabin.draw(ctx); return; }
     if (!this.player) return;
     const run = this.run;
     if (run?.phase === "tacmap" && this.state === GAME_STATE.PLAYING) { run.tacmap.draw(ctx, W, H); return; }   // BẢN ĐỒ CHIẾN THUẬT
+    if (run?.phase === "jumpcut" && this.state === GAME_STATE.PLAYING) { this.cabin.draw(ctx); return; }      // CẢNH NHẢY KHỎI MÁY BAY
     const drop = run?.phase === "airdrop" ? run.airdrop : null;
     const alive = this.state === GAME_STATE.PLAYING && !(run && run.boarded);
     const cam = this.camera, cx = cam.rx, cy = cam.ry;
@@ -3355,7 +3461,7 @@ class Game {
 }
 
 // =====================================================================================
-//  CON MÈO ngồi trên đầu Thanh Xuân lúc Ngại Ngùng (pixel art vẽ tay, quay mặt sang PHẢI)
+//  CON MÈO ngồi trên đầu Bạch Ngưng Băng lúc Ngại Ngùng (pixel art vẽ tay, quay mặt sang PHẢI)
 //    k viền · o cam · O vằn cam đậm · w trắng · p hồng · e mắt
 // =====================================================================================
 const CAT_PAL = { k: "#1a1420", o: "#f2a04a", O: "#c0662a", w: "#fff4e6", p: "#ff9ab8", e: "#1a1420", y: "#7cf0ff" };
@@ -3497,7 +3603,7 @@ class MenuUI {
       rulesBtn: $("rules-btn"), rules: $("rules"), rulesClose: $("rules-close"),
       lp: $("lobby-panel"), lpTitle: $("lp-title"), lpGems: $("lp-gems"), lpClose: $("lp-close"),
       lpArmory: $("lp-armory"), lpUpgrade: $("lp-upgrade"), lpPortal: $("lp-portal"),
-      armoryGrid: $("armory-grid"), recipeList: $("recipe-list"), upgradeList: $("upgrade-list"), upChar: $("up-char"),
+      armoryGrid: $("armory-grid"), recipeList: $("recipe-list"), partsRow: $("parts-row"), upgradeList: $("upgrade-list"), upChar: $("up-char"),
       portalChar: $("portal-char"), loadout: $("portal-loadout"),
       shopList: $("shop-list"), shopGold: $("shop-gold"), shopMsg: $("shop-msg"), shopClose: $("shop-close"),
       // --- bản 5.0: Cổng Xuất Kích (chế độ + Túi Chiến Thuật) & bảng Tổng kết Rút Quân ---
@@ -3508,6 +3614,11 @@ class MenuUI {
       xresult: $("xresult"), xrKicker: $("xr-kicker"), xrTitle: $("xr-title"), xrSub: $("xr-sub"), xrMissions: $("xr-missions"),
       xrTime: $("xr-time"), xrKills: $("xr-kills"), xrScore: $("xr-score"), xrGems: $("xr-gems"), xrHaulH: $("xr-haul-h"), xrHaul: $("xr-haul"),
       xrAgain: $("xr-again"), xrHome: $("xr-home"),
+      // --- bản 5.2: tab giới thiệu chế độ + KHOANG MÁY BAY ---
+      ppBrief: $("pp-brief"), ppArcade: $("pp-arcade"), briefStash: $("brief-stash"),
+      cabin: $("cabin"), cabChar: $("cab-char"), cabDiff: $("cab-diff"), cabAlt: $("cab-alt"), cabSpd: $("cab-spd"),
+      cabEta: $("cab-eta"), cabEtaWrap: $("cab-eta-wrap"), cabLight: $("cab-light"), cabAmmo: $("cab-ammo"),
+      cabBack: $("cab-back"), cabJump: $("cab-jump"), cabToggle: $("cab-toggle"), cabKitX: $("cab-kit-x"), cabSkip: $("cab-skip"),
     };
     this.buildTitle();
     this.bindEvents();
@@ -3530,8 +3641,8 @@ class MenuUI {
     const g = this.game;
     this.el.mapPrev.addEventListener("click", () => { g.sound.unlock(); this.stepMap(-1); });
     this.el.mapNext.addEventListener("click", () => { g.sound.unlock(); this.stepMap(1); });
-    this.el.start.addEventListener("click", () => g.start(g.charIndex));
-    this.el.quick.addEventListener("click", () => g.start(g.charIndex));
+    this.el.start.addEventListener("click", () => g.launch(g.charIndex));
+    this.el.quick.addEventListener("click", () => g.launch(g.charIndex));
     this.el.mute.addEventListener("click", () => { g.sound.unlock(); this.toggleMute(); });
     this.el.retry.addEventListener("click", () => g.start(g.charIndex));
     this.el.home.addEventListener("click", () => g.goMenu());
@@ -3546,8 +3657,16 @@ class MenuUI {
     // Cổng Xuất Kích: chọn chế độ, thời lượng · Tổng kết rút quân
     this.el.modeExtract.addEventListener("click", () => { g.setMode("extract"); g.sound.play("uiSelect", 0.5); this.renderPanel(); });
     this.el.modeArcade.addEventListener("click", () => { g.setMode("arcade"); g.sound.play("uiSelect", 0.5); this.renderPanel(); });
-    this.el.durBtns.addEventListener("click", (e) => { const m = Number(e.target.closest("button")?.dataset.min); if (m) { g.stash.setDuration(m); g.sound.play("uiSelect", 0.5); this.renderPanel(); } });
-    this.el.xrAgain.addEventListener("click", () => g.start(g.charIndex));
+    this.el.durBtns.addEventListener("click", (e) => { const m = Number(e.target.closest("button")?.dataset.min); if (m) { g.stash.setDuration(m); g.sound.play("uiSelect", 0.5); this.refreshKit(); } });
+    this.el.xrAgain.addEventListener("click", () => g.launch(g.charIndex));
+    // KHOANG MÁY BAY: về sảnh / nhảy dù
+    this.el.cabBack.addEventListener("click", () => { g.sound.play("uiSelect", 0.5); g.goMenu(); });
+    this.el.cabJump.addEventListener("click", () => g.jumpFromCabin());
+    this.el.cabToggle.addEventListener("click", () => this.toggleKit());
+    this.el.cabKitX.addEventListener("click", () => this.toggleKit(false));
+    this.el.cabSkip.addEventListener("click", () => { const ev = g.cabin.skip(); if (ev === "boarded") this.setCabinCutscene(false); });
+    // Tab trong khoang = bật/tắt bảng trang bị (không để trình duyệt nhảy ô)
+    window.addEventListener("keydown", (e) => { if (e.key === "Tab" && g.state === GAME_STATE.CABIN) e.preventDefault(); });
     this.el.xrHome.addEventListener("click", () => g.goMenu());
     window.addEventListener("pointerdown", () => g.sound.unlock(), { once: true });
   }
@@ -3659,7 +3778,7 @@ class MenuUI {
     e.lpPortal.classList.toggle("hidden", id !== "portal");
     e.lpTitle.textContent = { armory: "KHO VŨ KHÍ", upgrade: "BÀN NÂNG CẤP", portal: "CỔNG XUẤT KÍCH" }[id];
     e.lp.dataset.kind = id;
-    e.lp.classList.remove("is-extract");
+    e.lp.classList.remove("is-portal");
     this.renderPanel();
     e.lp.classList.remove("hidden");
     (id === "portal" ? e.start : e.lpClose).focus();
@@ -3698,8 +3817,12 @@ class MenuUI {
       btn.type = "button";
       btn.className = `arm-card${own ? " owned" : ""}${eq ? " equipped" : ""}`;
       btn.style.setProperty("--r-color", rarityColor(w.rarity));
-      const cv = document.createElement("canvas"); cv.width = 30; cv.height = 18; cv.className = "arm-icon";
-      const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, w, 0, 0, 30, 18, 1);
+      // khung ảnh: ảnh CHI TIẾT nếu có (src/attachments.js HD_GUNS), không thì ảnh pixel phóng to
+      const pic = document.createElement("span"); pic.className = "arm-pic";
+      const hd = hdGunUrl(w);
+      if (hd) { const im = document.createElement("img"); im.src = hd; im.alt = ""; im.loading = "lazy"; im.decoding = "async"; pic.append(im); pic.classList.add("hd"); }
+      else { const cv = document.createElement("canvas"); cv.width = 64; cv.height = 26; const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, w, 0, 0, 64, 26, 2); pic.append(cv); }
+      const cv = pic;
       const nm = document.createElement("strong"); nm.textContent = w.name;
       const meta = document.createElement("span"); meta.className = "arm-meta";
       meta.textContent = `${rarityName(w.rarity)} · ${w.mag ? `băng ${w.mag} viên · nạp ${w.reload}s` : w.cost ? `${w.cost} năng lượng/phát` : "không tốn năng lượng"}${w.charge ? " · tích lực" : ""}${isMelee(w) ? " · cận chiến" : ""}`;
@@ -3715,6 +3838,13 @@ class MenuUI {
         this.renderPanel();
       });
       grid.append(btn);
+    }
+    // phụ kiện (xem trước cho Xưởng Vũ Khí)
+    const pr2 = this.el.partsRow;
+    if (!pr2.childElementCount) for (const [id, a] of Object.entries(ATTACHMENTS)) {
+      const d = document.createElement("div"); d.className = "part-card"; d.dataset.id = id;
+      d.innerHTML = `<span class="part-pic"><img src="${a.img}" alt="" loading="lazy"></span><b>${a.name}</b><small>${ATTACH_SLOTS[a.slot]}</small><span>${a.desc}</span>`;
+      pr2.append(d);
     }
     // công thức ghép
     const rl = this.el.recipeList;
@@ -3755,18 +3885,85 @@ class MenuUI {
   renderPortal() {
     const g = this.game, pr = g.progress, char = CHARACTERS[g.charIndex], e = this.el, ex = g.mode === "extract";
     e.portalChar.textContent = char.name;
-    e.lp.classList.toggle("is-extract", ex && this.panel === "portal");
+    e.lp.classList.toggle("is-portal", this.panel === "portal");   // bảng Cổng: cùng 1 kích thước cho cả 2 tab
     e.modeExtract.setAttribute("aria-selected", String(ex));
     e.modeArcade.setAttribute("aria-selected", String(!ex));
-    e.ppExtract.classList.toggle("hidden", !ex);
+    e.ppBrief.classList.toggle("hidden", !ex);
+    e.ppArcade.classList.toggle("hidden", ex);
+    e.lpPortal.classList.toggle("is-arcade", !ex);
     e.startLabel.textContent = ex ? "LÊN MÁY BAY" : "VÀO TRẬN";
     e.portalHint.innerHTML = ex
-      ? `Trang bị cho <b class="c-gold">${char.name}</b>. Phím <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: lên máy bay.`
+      ? `Xuất kích cùng <b class="c-gold">${char.name}</b>. Phím <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: lên máy bay (chọn đồ trong khoang).`
       : `Chọn nơi xuất trận cho <b class="c-gold">${char.name}</b>. Phím <kbd>←</kbd><kbd>→</kbd>: bản đồ · <kbd>↑</kbd><kbd>↓</kbd>: độ khó · <kbd>Enter</kbd>: vào trận.`;
     const crafted = pr.secondary ? WEAPONS[pr.secondary] : null, kit = ex ? g.stash.bagWeaponDef : null, sec = kit?.def ?? crafted;
     const lvl = pr.level(char.id, "weapon");
     e.loadout.innerHTML = `Mang vào trận: <b>${char.weapon.name}${lvl ? " " + "★".repeat(1 + lvl) : ""}</b>${sec ? ` + <b style="color:${rarityColor(sec.rarity)}">${sec.name}</b>` : " · ô 2 trống"} · Máu, Giáp, Năng lượng 100%`;
-    if (ex) this.renderKit();
+    if (ex) {
+      const st = g.stash, items = ITEM_ORDER.reduce((n, id) => n + st.count(id), 0), bagN = st.bag.filter(Boolean).length;
+      e.briefStash.innerHTML = `Kho Đồ: <b>${items}</b> món · <b>${st.weapons.length}</b> súng · Túi đang xếp <b>${bagN}/4</b> ô · ván <b>${String(st.duration).padStart(2, "0")}:00</b>`;
+    } else e.briefStash.textContent = "";
+  }
+
+  /** Làm mới khối chọn đồ (nằm trong khoang máy bay; trong sảnh thì làm mới bảng đang mở) */
+  refreshKit() { if (this.game.state === GAME_STATE.CABIN) this.renderCabin(); else this.renderPanel(); }
+
+  // ---------------- KHOANG MÁY BAY ----------------
+  showCabin() {
+    const e = this.el;
+    e.menu.classList.add("hidden"); e.xresult.classList.add("hidden"); e.gameover.classList.add("hidden");
+    stage.classList.remove("in-game");
+    e.cabin.classList.remove("hidden");
+    this.toggleKit(true, false);
+    this.setCabinCutscene(!!this.game.cabin.cutscene);
+    this.renderCabin();
+  }
+  /** Đang chiếu cảnh LÊN MÁY BAY: ẩn hết bảng, chỉ hiện nút bỏ qua */
+  setCabinCutscene(on) {
+    this.el.cabin.classList.toggle("cutscene", on);
+    if (!on) this.el.cabJump.focus();
+  }
+  /** Bật / tắt bảng TRANG BỊ trong khoang (Tab · I · nút · đứng cạnh thùng hàng bấm E) */
+  toggleKit(on = this.el.cabin.classList.contains("kit-off"), sound = true) {
+    this.el.cabin.classList.toggle("kit-off", !on);
+    this.el.cabToggle.innerHTML = on ? "Ẩn trang bị <small>Tab</small>" : "Mở trang bị <small>Tab</small>";
+    this.el.cabToggle.setAttribute("aria-pressed", String(on));
+    if (sound) this.game.sound.play("uiSelect", 0.4);
+    if (on) this.renderCabin();
+  }
+  hideCabin() { this.el.cabin.classList.add("hidden"); }
+  renderCabin() {
+    const g = this.game, e = this.el, char = CHARACTERS[g.charIndex], d = DIFFICULTY[g.diffIndex];
+    e.cabChar.textContent = char.name;
+    e.cabDiff.textContent = d.name; e.cabDiff.style.color = d.color;
+    this.renderKit();
+    e.cabAmmo.innerHTML = "Đạn: mỗi khẩu súng mang theo <b>2 băng dự trữ</b> (vạch màu cạnh số đạn = loại đạn). Trong trận nhặt hộp đạn đúng loại (súng lục, tiểu liên, súng trường, bắn tỉa, hoa cải, súng máy, pin năng lượng, đạn nổ).";
+  }
+  updateCabin(dt, ev = null) {
+    const g = this.game, k = input.pressed, e = this.el, cab = g.cabin;
+    if (cab.cutscene) {   // cảnh LÊN MÁY BAY: Enter / Space / Esc / click để bỏ qua
+      if (cab.seq.t > 0.3 && (k.has("enter") || k.has(" ") || k.has("escape") || k.has("mouse0"))) ev = cab.skip();
+      if (ev === "boarded") this.setCabinCutscene(false);
+      return;
+    }
+    if (ev === "boarded") this.setCabinCutscene(false);
+    if (ev === "gear") this.toggleKit();
+    if (ev === "door") { g.jumpFromCabin(); return; }
+    if (k.has("tab") || k.has("i")) this.toggleKit();
+    if (k.has("escape")) { g.goMenu(); return; }
+    if (k.has("enter") && document.activeElement?.tagName !== "BUTTON") { g.jumpFromCabin(); return; }
+    // đồng hồ trong khoang (chỉ để trang trí)
+    this.cabT = (this.cabT ?? 0) - dt;
+    if (this.cabT <= 0) {
+      this.cabT = 0.25;
+      const eta = Math.ceil(cab.eta);
+      e.cabAlt.textContent = (3200 + Math.round(Math.sin(cab.t * 0.6) * 18 + (cab.turbulent ? (Math.random() - 0.5) * 60 : 0))).toLocaleString("vi-VN");
+      e.cabSpd.textContent = String(520 + Math.round(Math.sin(cab.t * 0.9) * 6));
+      e.cabEta.textContent = `00:${String(eta).padStart(2, "0")}`;
+      e.cabEtaWrap.classList.toggle("ready", cab.ready);
+      e.cabLight.textContent = cab.ready ? "ĐÈN XANH · sẵn sàng nhảy" : cab.turbulent ? "Nhiễu động · bám chắc!" : "Đèn đỏ · chuẩn bị";
+      e.cabLight.classList.toggle("go", cab.ready);
+      e.cabin.classList.toggle("shake", cab.turbulent);
+    }
   }
 
   /** CỔNG XUẤT KÍCH — chế độ Rút Quân: Kho Đồ (bấm để bỏ vào túi) · Túi Chiến Thuật 4 ô · súng trong Kho · thời lượng */
@@ -3783,7 +3980,7 @@ class MenuUI {
       const nm = document.createElement("span"); nm.textContent = d.name;
       b.append(icon(id), n, nm);
       if (free > 0 && free !== have) { const f = document.createElement("i"); f.className = "free"; f.textContent = `+${free}`; b.append(f); }
-      b.addEventListener("click", () => { if (st.addToBag(id)) g.sound.play("swap", 0.5); else g.sound.play("skillDenied", 0.4); this.renderPanel(); });
+      b.addEventListener("click", () => { if (st.addToBag(id)) g.sound.play("swap", 0.5); else g.sound.play("skillDenied", 0.4); this.refreshKit(); });
       e.stashItems.append(b);
     }
     e.bagSlots.replaceChildren();
@@ -3797,7 +3994,7 @@ class MenuUI {
         b.title = `${ITEM_DEFS[s.id].name} x${s.n} — bấm để bớt 1`;
         const c = document.createElement("span"); c.className = "cnt"; c.textContent = `x${s.n}`;
         b.append(icon(s.id), c);
-        b.addEventListener("click", () => { st.removeFromBag(i); g.sound.play("swap", 0.4); this.renderPanel(); });
+        b.addEventListener("click", () => { st.removeFromBag(i); g.sound.play("swap", 0.4); this.refreshKit(); });
       } else b.title = "Ngăn trống — bấm món trong Kho Đồ để bỏ vào";
       e.bagSlots.append(b);
     });
@@ -3811,11 +4008,13 @@ class MenuUI {
       b.type = "button"; b.className = `stash-weapon${st.bagWeapon === i ? " on" : ""}`;
       b.style.setProperty("--r-color", rarityColor(def.rarity));
       b.title = `${def.name}${w.lvl > 1 ? " " + "★".repeat(w.lvl) : ""} — ${def.desc}`;
-      const cv = document.createElement("canvas"); cv.width = 36; cv.height = 22;
-      const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, def, 0, 0, 36, 22, 1);
+      const hd = hdGunUrl(def);   // ảnh chi tiết nếu có
+      let cv;
+      if (hd) { cv = document.createElement("img"); cv.src = hd; cv.alt = ""; }
+      else { cv = document.createElement("canvas"); cv.width = 36; cv.height = 22; const c2 = cv.getContext("2d"); c2.imageSmoothingEnabled = false; drawWeaponIcon(c2, def, 0, 0, 36, 22, 1); }
       const t = document.createElement("span"); t.textContent = `${def.name}${w.lvl > 1 ? " " + "★".repeat(w.lvl) : ""}`;
       b.append(cv, t);
-      b.addEventListener("click", () => { st.setBagWeapon(st.bagWeapon === i ? -1 : i); g.sound.play("swap", 0.5); this.renderPanel(); });
+      b.addEventListener("click", () => { st.setBagWeapon(st.bagWeapon === i ? -1 : i); g.sound.play("swap", 0.5); this.refreshKit(); });
       e.stashWeapons.append(b);
     });
     const bw = st.bagWeaponDef;
@@ -3842,13 +4041,13 @@ class MenuUI {
         if (g.mode === "arcade" && (k.has("arrowright") || k.has("d"))) this.stepMap(1);
         if (k.has("arrowup") || k.has("w")) this.stepDiff(-1);
         if (k.has("arrowdown") || k.has("s")) this.stepDiff(1);
-        if (k.has("enter") && document.activeElement !== this.el.start) { g.start(g.charIndex); return; }
+        if (k.has("enter") && document.activeElement !== this.el.start) { g.launch(g.charIndex); return; }
       }
       g.lobby.update(dt, input);
       return;
     }
     if (k.has("?") || k.has("/")) { this.showRules(true); return; }
-    if (k.has("enter") && document.activeElement?.tagName !== "BUTTON") { g.start(g.charIndex); return; }
+    if (k.has("enter") && document.activeElement?.tagName !== "BUTTON") { g.launch(g.charIndex); return; }
     g.lobby.update(dt, input);
     if (this.infoT > 0 && (this.infoT -= dt) <= 0 && g.lobby.focus < 0) this.hideInfo();
   }
@@ -4008,6 +4207,7 @@ class MenuUI {
 
   hideAll() {
     this.el.menu.classList.add("hidden");
+    this.el.cabin.classList.add("hidden");
     this.el.xresult.classList.add("hidden");
     this.el.rules.classList.add("hidden");
     this.el.gameover.classList.add("hidden");
@@ -4103,6 +4303,7 @@ async function main() {
     onFocus: (i) => game.ui.onFocus(i),
   });
   game.lobby.enter(game.charIndex);
+  game.cabin = new Cabin();   // KHOANG MÁY BAY (src/cabin.js)
   game.touch = new TouchControls(stage, input, {
     press: (k) => { game.sound.unlock(); input.pressed.add(k); },
     goMenu: () => game.goMenu(),

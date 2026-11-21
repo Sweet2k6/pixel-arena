@@ -14,6 +14,7 @@
 //  GHÉP (MERGE): 2 khẩu giống nhau cùng ★ -> ★+1 · 2 khẩu ★3 có `evolve` -> vũ khí Thần Thoại · công thức RECIPES.
 //  Muốn chỉnh chỉ số (sát thương, tốc độ bắn, năng lượng...): sửa trong WEAPONS bên dưới.
 // =====================================================================================
+import { AMMO, ammoTypeOf, reserveOf, takeAmmo } from "./ammo.js";   // đạn dự trữ theo loại (chế độ Rút Quân)
 import { angleDiff, circleHit, pointSegDist2, withAlpha, rand, TAU } from "./util.js";
 import { Pool } from "./pool.js";
 import { RARITY, rarityColor } from "./rarity.js";
@@ -537,6 +538,7 @@ export function mergeResult(a, b) {
 /** Bắt đầu nạp đạn (chỉ khi còn thiếu đạn và chưa đang nạp). Trả về true nếu vừa bắt đầu. */
 export function startReload(w, game) {
   if (!w || !w.mag || w.reloadT > 0 || w.ammo >= w.mag) return false;
+  if (reserveOf(w) <= 0) return false;   // Rút Quân: hết đạn dự trữ loại này -> không thay băng được
   w.reloadT = w.reload ?? 1.2;
   void game;
   return true;
@@ -545,13 +547,23 @@ export function startReload(w, game) {
 export function tickReload(w, dt, game) {
   if (!w || !(w.reloadT > 0)) return;
   w.reloadT -= dt;
-  if (w.reloadT <= 0) { w.reloadT = 0; w.ammo = w.mag; game?.sound?.play("reload", 0.5); }
+  if (w.reloadT <= 0) {
+    w.reloadT = 0;
+    if (AMMO.pool) w.ammo += takeAmmo(ammoTypeOf(w), w.mag - w.ammo);   // chỉ lấy đủ số viên còn thiếu từ kho dự trữ
+    else w.ammo = w.mag;
+    game?.sound?.play("reload", 0.5);
+  }
 }
 /** Trừ 1 viên cho 1 phát bắn. false = KHÔNG được bắn (đang nạp / hết đạn -> tự nạp + tiếng "tạch"). Vũ khí không có băng luôn true. */
 export function tryConsumeAmmo(w, game) {
   if (!w?.mag) return true;
   if (w.reloadT > 0) return false;
-  if (w.ammo <= 0) { startReload(w, game); game?.sound?.play("gunEmpty", 0.5); return false; }
+  if (w.ammo <= 0) {
+    const now = performance.now();
+    if (!startReload(w, game) && AMMO.pool && now - (w.emptyAt ?? 0) > 1400) { w.emptyAt = now; AMMO.onEmpty?.(w); }
+    if (now - (w.clickAt ?? 0) > 220) { w.clickAt = now; game?.sound?.play("gunEmpty", 0.5); }   // "tạch" (không dồn dập)
+    return false;
+  }
   w.ammo--;
   if (w.ammo <= 0) startReload(w, game);
   return true;
@@ -560,6 +572,8 @@ export function tryConsumeAmmo(w, game) {
 export function ammoLabel(w) {
   if (!w?.mag) return null;
   if (w.reloadT > 0) return `NẠP ${w.reloadT.toFixed(1)}s`;
+  const r = reserveOf(w);
+  if (r !== Infinity) return w.ammo <= 0 && r <= 0 ? "HẾT ĐẠN" : `${w.ammo} | ${r}`;   // Rút Quân: đạn trong băng | dự trữ
   return `${w.ammo}/${w.mag}`;
 }
 /** Bán kính tiếng ồn (px) khi bắn: zombie nghe thấy trong vòng này. Cận chiến = 0 (im lặng). */

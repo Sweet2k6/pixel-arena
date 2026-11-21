@@ -4,6 +4,27 @@ Game đấu trường sinh tồn pixel art 2D (HTML5 Canvas + JavaScript thuần
 
 **▶ Chơi ngay:** https://sweet2k6.github.io/pixel-arena/
 
+## Có gì mới ở bản 5.4 — TRỜI TẬN THẾ · ÂM THANH MÁY BAY · MINH HUY
+- **Bầu trời ngày tận thế** ngoài máy bay (`src/cabin.js`, bảng màu `DOOM`): trời đỏ quạch tối sầm, mây đen cuồn cuộn, **tia chớp**, **pháo phòng không nổ** quanh máy bay (khói đen trôi qua cửa sổ, ánh lửa hắt vào khoang, nổ gần thì khoang rung mạnh + đèn chập chờn). Cảnh lên máy bay: thành phố đổ nát bốc cháy, cột khói, bom nổ thành nấm khói, đèn pha quét trời, zombie lê về phía máy bay, xác xe cháy, tro bụi bay. Cảnh rơi tự do: lao xuống thành phố đang cháy. Nhịp chớp/nổ chỉnh ở `SKY_EVENTS`.
+- **Âm thanh khoang máy bay** (`src/cabinAudio.js`, tổng hợp bằng Web Audio — không cần file): động cơ cánh quạt ù ù + nhịp đập cánh quạt, gió rít giật từng cơn, còi báo động phòng không ở sân bay, tiếng nổ xa (thấy chớp trước, nghe tiếng sau) / gần (đanh + mảnh văng lách cách), sấm rền, khung máy bay kẽo kẹt khi nhiễu động, còi báo nhảy khi đèn xanh / mở cửa, gió gào khi rơi tự do. Vẫn nghe tiếng máy bay khi đang chọn điểm nhảy. Nút Tắt tiếng có tác dụng; chỉnh to nhỏ ở `CABIN_VOLUME`.
+- **Tí Ngố đổi tên thành MINH HUY** và đi **giày trắng** đế xám (`chibi.sole` trong `characters.js`).
+
+## Có gì mới ở bản 5.3 — ĐI LẠI TRONG KHOANG · CẢNH LÊN MÁY BAY / NHẢY DÙ · TÍ NGỐ (nay là MINH HUY)
+- **Đi lại trong khoang máy bay**: WASD / phím mũi tên, hoặc click / chạm vào sàn để đi tới. Đứng cạnh đống thùng hàng bấm <kbd>E</kbd> = mở/ẩn **Trang bị**; ra **cửa JUMP** ở đuôi khoang bấm <kbd>E</kbd> = nhảy dù. Bảng trang bị **bật/tắt** bằng <kbd>Tab</kbd> / <kbd>I</kbd> / nút "Ẩn trang bị" / nút × trên bảng.
+- **Cảnh LÊN MÁY BAY**: sân bay lúc hoàng hôn, nhân vật chạy lên dốc sau của C-130, cửa gập lại, cánh quạt quay nhanh dần, cất cánh (Enter / click để bỏ qua).
+- **Cảnh NHẢY KHỎI MÁY BAY**: chọn điểm nhảy trên bản đồ chiến thuật -> về khoang, cửa JUMP trượt mở, gió lùa, nhân vật chạy vòng qua thùng hàng ra cửa và lao ra, **rơi tự do qua mây** (đồng hồ độ cao), rồi mới bung dù xuống điểm đã chọn.
+- **Nhân vật mới TÍ NGỐ** (`characters.js`, vẽ bằng code ở `src/chibi.js` kiểu đầu `"bowl"`): tóc ngố bát úp bết mồ hôi, 2 răng thỏ, lùn, áo giáp chiến thuật đen. Yếu nhất game (4 Máu, 3 Giáp), súng tay run; bù lại **15% né đòn**, **lục hòm nhanh gấp đôi**, **thêm 1 hộp đạn mỗi hòm**. Tuyệt chiêu **Hoảng Loạn Xả Đạn**: 2.5 giây xả 40 viên tứ phía.
+
+## Có gì mới ở bản 5.2 — KHOANG MÁY BAY · ĐẠN THEO LOẠI · KHO SÚNG HD
+- **Khoang máy bay** (`game/src/cabin.js`): bấm **LÊN MÁY BAY** ở Cổng Xuất Kích -> vào khoang C-130 vẽ pixel art: cửa sổ tròn có **mây trôi**, giá súng, thùng đạn, ghế lưới đỏ, dù treo, đèn nhảy đỏ -> xanh, khoang **rung nhẹ + nhiễu động** (đèn chớp, dây đung đưa), tiếng động cơ. **Chọn đồ (Kho Đồ, Túi Chiến Thuật, súng, thời lượng) nằm trong khoang**; bấm **CHỌN ĐIỂM NHẢY** để ra bản đồ chiến thuật. Ảnh nền riêng: `CABIN_IMAGES` trong `cabin.js`.
+- **Đạn theo loại** (`game/src/ammo.js`, chế độ Rút Quân): 8 loại đạn, thay băng chỉ lấy từ đạn dự trữ đúng loại; HUD hiện `trong băng | dự trữ` + vạch màu loại đạn, hết thì báo **HẾT ĐẠN**. Nhặt **hộp đạn** từ hòm tiếp tế, zombie (zombie to rơi nhiều), hoặc nhặt súng (kèm 1 băng). Chế độ Giải Trí vẫn vô hạn đạn.
+- **Kho Vũ Khí ảnh chi tiết (HD)**: M4A1, AKM, MP5A3, AWM, Remington 870, Glock 19, M249 dùng ảnh lớn cắt từ tấm ảnh súng của bạn (`game/assets/images/guns/hd/`); mọi thẻ có khung ảnh lớn. Trong trận vẫn dùng ảnh pixel nhỏ (ở 480x270 ảnh chi tiết bị nhòe).
+- **Phụ kiện súng — nền móng Xưởng Vũ Khí** (`game/src/attachments.js`): Ống Ngắm Toàn Ký, Kính Chấm Đỏ, Kính 4x, Nòng Giảm Thanh, Lưỡi Lê, Tay Cầm Trước, Băng Đạn Mở Rộng — có ảnh, ô gắn, chỉ số và hàm `applyAttachments()`; đang hiện xem trước ở Kho Vũ Khí.
+- **Cổng Xuất Kích**: 2 tab Rút Quân / Giải Trí **cùng 1 kích thước**, mỗi tab có 4 bước giới thiệu. Nhân vật Thanh Xuân đổi tên **Bạch Ngưng Băng**.
+- **Điện thoại**: chạm lần đầu ngay ở sảnh là bật **toàn màn hình + khóa ngang** (trước đây phải vào trận mới to ra).
+- **Xem trực tiếp khi sửa**: chạy `Chay_Game.bat` -> mỗi khi file `game/dev-live.txt` đổi, trang tự tải lại (đang trong trận thì đợi về sảnh). Chỉ chạy trên máy nhà (localhost), không ảnh hưởng bản GitHub.
+- Công cụ: `game/tools/remove_checker_bg.py` (tách nền ô caro GIẢ của ảnh AI), `game/tools/crop_hd_guns.py` (cắt súng/phụ kiện).
+
 ## Có gì mới ở bản 5.0 — NHẢY DÙ · NHIỆM VỤ · RÚT QUÂN
 Lối chơi chính chuyển sang **Extraction Survival** (ván 5 / 7 / 10 phút). Lối chơi sinh tồn theo đợt cũ vẫn còn nguyên, nay là **Chế Độ Giải Trí** (chọn ở Cổng Xuất Kích).
 - **Kho Đồ vĩnh viễn** (`game/src/stash.js`, localStorage): Hộp Cứu Thương, Bình Năng Lượng, Lựu Đạn, Mìn Cảm Ứng, Ống Tiêm Kích Thích + súng mang về từ trận. Người chơi mới được tặng bộ đồ khởi đầu.
@@ -46,7 +67,7 @@ Lối chơi chính chuyển sang **Extraction Survival** (ván 5 / 7 / 10 phút)
 - **Bản đồ thứ 5 — Nghĩa Trang Ma Ám** (sương mù, bia mộ, bàn tay ma giữ chân).
 - **Bản đồ đẹp hơn:** sàn vẽ chi tiết theo từng biome (gạch vát cạnh, rêu, cỏ, xương, tuyết, phiến bazan...), đồ trang trí, đuốc và lò lửa, **ánh sáng động** (bóng tối + vùng sáng quanh nhân vật, đuốc, dung nham, đạn phép), thời tiết (bụi, đom đóm, tàn lửa, tuyết, sương mù), viền tối màn hình.
 - **Màn hình Luật Chơi** (nút "?" ở menu), kỷ lục riêng từng nhân vật, thống kê cuối trận đầy đủ hơn, xem thẻ đã chọn khi tạm dừng.
-- **Sửa lỗi & cân bằng:** Thanh Xuân không còn đóng băng quái vĩnh viễn (quái miễn nhiễm 1.2s sau khi tan băng), tuyệt chiêu Ngại Ngùng không còn xóa sổ Tinh Anh / Boss, gai băng không che nhân vật, Boss trâu hơn, nút tạm dừng trên điện thoại không đè chữ...
+- **Sửa lỗi & cân bằng:** Bạch Ngưng Băng không còn đóng băng quái vĩnh viễn (quái miễn nhiễm 1.2s sau khi tan băng), tuyệt chiêu Ngại Ngùng không còn xóa sổ Tinh Anh / Boss, gai băng không che nhân vật, Boss trâu hơn, nút tạm dừng trên điện thoại không đè chữ...
 - **Tối ưu:** lưới va chạm tĩnh cho tường/cột (đạn và quái chỉ xét ô lân cận), ảnh PNG nén còn ~một nửa dung lượng, ánh sáng dùng vết sáng vẽ sẵn (bấm **L** để tắt nếu máy yếu).
 
 ## Nhân vật
@@ -55,7 +76,8 @@ Lối chơi chính chuyển sang **Extraction Survival** (ván 5 / 7 / 10 phút)
 | Xạ Thủ | Súng Lục | Cuồng Nộ (x2 tốc bắn) | 8% chí mạng |
 | Võ Sư | Găng Sắt | Lướt Xung Kích | Bất tử lâu hơn khi bị đánh |
 | Pháp Sư Năng Lượng | Trượng cầu năng lượng | Bão Cầu 360° | Giáp hồi nhanh gấp rưỡi |
-| Thanh Xuân | Đường gai băng | Ngại Ngùng (băng + sét xóa quái thường) | Quái đóng băng nhận +20% sát thương |
+| Bạch Ngưng Băng | Đường gai băng | Ngại Ngùng (băng + sét xóa quái thường) | Quái đóng băng nhận +20% sát thương |
+| Minh Huy | Súng Trường Tập Bắn (tay run) | Hoảng Loạn Xả Đạn (40 viên tứ phía, 2.5s) | 15% né · lục hòm x2 · +1 hộp đạn/hòm |
 | Thánh Kỵ Sĩ | Búa Thánh (choáng) | Khiên Thánh Quang (bất tử 3s, hồi máu) | Lên cấp hồi 1 Máu |
 | Thợ Săn | Cung Săn (xuyên) | Mưa Tên | 12% chí mạng |
 | Tử Linh Sư | Cầu linh hồn đuổi mục tiêu | Triệu Hồi Vong Linh | 15 quái gục hồi 1 Máu |
@@ -99,7 +121,7 @@ Lối chơi chính chuyển sang **Extraction Survival** (ván 5 / 7 / 10 phút)
 - **Tự chơi để kiểm tra:** `/game/#autoplay-<nhân vật>-<bản đồ>` (thêm `-god` bất tử, `-wave-5` bắt đầu từ đợt 5, `-diff-2` độ khó Ác Mộng).
 
 ### Thêm nhân vật từ spritesheet vẽ bằng AI (nền ô caro giả)
-`python game/tools/prepare_spritesheet.py anh_goc.png game/assets/images/actors/ten.png 40 4 8 4 --shy=0:3` (cần Pillow) — tự xóa nền ô caro, tách từng frame, thu nhỏ về cao 40px, căn chân. Rồi thêm khối `spritesheet` cho nhân vật trong `characters.js` (xem Thanh Xuân làm mẫu).
+`python game/tools/prepare_spritesheet.py anh_goc.png game/assets/images/actors/ten.png 40 4 8 4 --shy=0:3` (cần Pillow) — tự xóa nền ô caro, tách từng frame, thu nhỏ về cao 40px, căn chân. Rồi thêm khối `spritesheet` cho nhân vật trong `characters.js` (xem Bạch Ngưng Băng làm mẫu).
 
 ### Dùng spritesheet của bạn
 Mở **`game/fx-config.js`**, đổi `src` của hiệu ứng (hoặc nhân vật) sang ảnh của bạn rồi điền `cols`, `rows` (hoặc `frameW`, `frameH`), `fps`, `anchorX`, `anchorY`; lệch thì chỉnh `offsetX`, `offsetY`. Ảnh chia không đều sẽ có cảnh báo trong Console (F12).

@@ -11,6 +11,7 @@
 //    "done"    — đã có kết quả (thành công / tử trận), main.js hiện bảng tổng kết
 //  Chỉnh thông số: EXTRACT bên dưới. Chèn ảnh riêng: EXTRACT_IMAGES.
 // =====================================================================================
+import { AMMO_DROP, rollAmmoType } from "./ammo.js";   // hộp đạn trong hòm tiếp tế
 import { ITEM_DEFS, BAG_SLOTS, drawItemIcon } from "./stash.js";
 import { MissionManager } from "./missions.js";
 import { TacticalMap, AirDrop } from "./deploy.js";
@@ -171,7 +172,7 @@ export class ExtractionRun {
     if (!S) return;
     if ((S.x - p.x) ** 2 + (S.y - p.y) ** 2 > 34 * 34 || p.hp <= 0) { this.searching = null; return; }
     S.search += dt;
-    if (S.search >= EXTRACT.searchTime) { this.searching = null; this.openSpot(S); }
+    if (S.search >= EXTRACT.searchTime * (p.char?.searchMul ?? 1)) { this.searching = null; this.openSpot(S); }
   }
   openSpot(s) {
     const g = this.game;
@@ -182,6 +183,9 @@ export class ExtractionRun {
     for (const [id, n] of got) this.addLoot(id, n);
     if (s.kind === "crate") {
       for (let i = 0; i < randInt(2, 5); i++) g.drops.push(Drop.obtain(s.x, s.y - 6, "gold", 1));
+      // HỘP ĐẠN theo loại (thường đúng loại súng đang cầm — xem src/ammo.js)
+      const nb = randInt(...AMMO_DROP.crateBoxes) + (g.player.char?.lootBonus ?? 0);   // Minh Huy: lục giỏi, thêm hộp đạn
+      for (let i = 0; i < nb; i++) g.dropAmmo?.(s.x + rand(-8, 8), s.y + 6, rollAmmoType(g.player.weapons.filter(Boolean)));
       if (Math.random() < CRATE_WEAPON.chance) {
         const w = pickFirearm(CRATE_WEAPON.odds);
         if (w) { g.pickups.push(new Pickup(s.x, s.y + 8, "weapon", w, { vx: rand(-25, 25), vy: 45 })); g.banner(`Trong hòm có súng: ${w.name} — bấm E để nhặt`, "#ffe26b", false, 2.6); }
@@ -457,7 +461,7 @@ export class ExtractionRun {
       c.fillRect(Math.round(s.x) - r, Math.round(s.y) - r, r * 2, r * 2);
     }
     if (this.searching) {
-      const S = this.searching, k = S.search / EXTRACT.searchTime, x = Math.round(S.x), y = Math.round(S.y - 26);
+      const S = this.searching, k = S.search / (EXTRACT.searchTime * (this.game.player?.char?.searchMul ?? 1)), x = Math.round(S.x), y = Math.round(S.y - 26);
       c.strokeStyle = "#000"; c.lineWidth = 3; c.beginPath(); c.arc(x, y, 6, 0, TAU); c.stroke();
       c.strokeStyle = "#ffe26b"; c.lineWidth = 2; c.beginPath(); c.arc(x, y, 6, -Math.PI / 2, -Math.PI / 2 + TAU * k); c.stroke();
     }

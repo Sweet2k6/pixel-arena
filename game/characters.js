@@ -13,7 +13,7 @@
 //       (logic của từng loại nằm trong main.js, mục SKILL_HANDLERS / Player.attack)
 //    4. Chèn ảnh của bạn vào 3 ô `sprite`, `weaponImg`, `skillIcon` (để "" thì game tự vẽ hình pixel thay thế).
 //       `sprite` là 1 ảnh TĨNH. Muốn nhân vật có hoạt ảnh từ SPRITESHEET của bạn: thêm khối `spritesheet`
-//       (xem nhân vật Thanh Xuân ở cuối file làm mẫu: đường dẫn ảnh, kích thước ô, hàng/frame của từng hoạt ảnh).
+//       (xem nhân vật Bạch Ngưng Băng ở cuối file làm mẫu: đường dẫn ảnh, kích thước ô, hàng/frame của từng hoạt ảnh).
 //       Không có `spritesheet` thì game vẽ nhân vật CHIBI theo khối `chibi` (kiểu đầu, màu tóc, áo, quần...).
 //
 //  Đường dẫn ảnh tính từ thư mục  game/  — ví dụ "assets/images/gunner.png"
@@ -189,7 +189,7 @@ export const CHARACTERS = [
   // -----------------------------------------------------------------------------------
   {
     id: "thanhxuan",
-    name: "Thanh Xuân",
+    name: "Bạch Ngưng Băng",
     title: "Cô nàng băng giá hay ngại",
     desc: "Đeo balo đi học mà lạc vào hầm ngục. Tay không bắn gai băng đóng băng quái; hễ ngại là trời đất nổi băng sét.",
 
@@ -412,6 +412,51 @@ export const CHARACTERS = [
       damage: 6,
       width: 18,
       color: "#e8343f",
+    },
+  },
+
+  // -----------------------------------------------------------------------------------
+  // NHÂN VẬT 9 — MINH HUY: tân binh lùn, tóc ngố bết mồ hôi, 2 răng thỏ, đi giày trắng. YẾU NHẤT game (đã nerf),
+  //              bù lại nhỏ con khó trúng + lục đồ cực nhanh (hợp chế độ Rút Quân). Sợ quá thì xả đạn loạn xạ.
+  // -----------------------------------------------------------------------------------
+  {
+    id: "tingo",
+    name: "Minh Huy",
+    title: "Tân binh run rẩy",
+    desc: "Lính mới lùn tịt, tóc ngố bết mồ hôi, hai răng thỏ, đôi giày trắng tinh. Máu mỏng, bắn yếu, tay run — nhưng nhỏ con khó trúng và lục đồ cực nhanh. Sợ quá thì nhắm mắt xả đạn loạn xạ.",
+    sprite: "", weaponImg: "", skillIcon: "",
+    // short: 2 = lùn hơn 2 pixel · head "bowl" = tóc ngố bát úp + 2 răng thỏ (src/chibi.js) · vest = áo giáp chiến thuật · shoes + sole = giày trắng đế xám
+    chibi: { head: "bowl", short: 2, hair: "#1a1c22", skin: "#f0c79c", eyes: "#2a1a12", outfit: "#2c3038", outfit2: "#3a3f48", vest: "#1e2127", pouch: "#5c5638", belt: "#3a3428", pants: "#25282e", shoes: "#f4f4ef", sole: "#a9aeb8" },
+    fallback: { hat: "", accent: "#5c5638", palette: { A: "#c8ccd4", B: "#8a909c", C: "#5a606c", D: "#3a3f48", E: "#44495a", F: "#2c3038", G: "#202328", J: "#15171b", m: "#5c5638" } },
+    stats: { hp: 4, armor: 3, speed: 98, energy: 150 },   // YẾU: thấp nhất game
+    crit: 0.03,
+    dodge: 0.15,         // nhỏ con: 15% né đòn (đòn sượt qua đầu)
+    searchMul: 0.5,      // lục hòm / túi y tế nhanh gấp đôi (chế độ Rút Quân)
+    lootBonus: 1,        // mỗi hòm tiếp tế có thêm 1 hộp đạn
+    passive: "Nhỏ con: 15% né đòn. Lục lọi giỏi: mở hòm nhanh gấp đôi, hòm có thêm 1 hộp đạn. Tay run: súng lệch nhiều.",
+    weapon: {
+      name: "Súng Trường Tập Bắn",
+      desc: "M4 cũ của đơn vị — tay run nên đạn lệch, sát thương thấp",
+      type: "gun",
+      sprite: "carbine",   // dùng ảnh súng M4A1 (src/guns.js)
+      damage: 0.75,
+      fireRate: 0.15,
+      bulletSpeed: 320,
+      bulletRadius: 2,
+      spread: 0.17,        // tay run
+      color: "#ffe08a",
+      sound: "shoot",
+    },
+    skill: {
+      type: "panic",
+      name: "Hoảng Loạn Xả Đạn",
+      desc: "Sợ quá nhắm mắt bóp cò: 2.5 giây xả 40 viên tỏa khắp xung quanh (1 sát thương mỗi viên), hất lùi quái sát bên lúc bắt đầu. Đi chậm 40% khi đang xả.",
+      cooldown: 11,
+      duration: 2.5,
+      count: 40,
+      damage: 1,
+      bulletSpeed: 300,
+      color: "#ffd27a",
     },
   },
 ];

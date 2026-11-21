@@ -4,6 +4,7 @@
 // =====================================================================================
 import { WORLD } from "./world.js";
 import { drawWeaponIcon, WEAPON_RARITY, mergeResult, ammoLabel } from "./weapons.js";
+import { AMMO_TYPES, ammoTypeOf, reserveOf } from "./ammo.js";
 import { clamp, withAlpha, TAU } from "./util.js";
 
 /** Minimap: rộng 80 pixel game, cao tự tính theo tỉ lệ bản đồ (2400x1600 -> 80x53 · 3200x2240 -> 80x56) */
@@ -88,7 +89,10 @@ export function drawWeaponSlots(ctx, x, y, p, time) {
     text(ctx, lab.length > max ? lab.slice(0, max - 1) + "…" : lab, x + 39, sy + 3, active ? (WEAPON_RARITY[w.rarity] ?? "#ffffff") : "#8a82a8");
     if (ammo) {   // súng thật: số đạn trong băng / đang nạp
       const reloading = w.reloadT > 0, empty = !reloading && w.ammo <= Math.max(1, Math.floor(w.mag * 0.2));
-      ctx.textAlign = "right"; text(ctx, ammo, x + 123, sy + 3, reloading ? "#ffb030" : empty ? "#ff7a5a" : "#e8e2f6"); ctx.textAlign = "left";
+      const res = reserveOf(w), dry = res !== Infinity && res <= 0, tw = Math.ceil(ctx.measureText(ammo).width);
+      ctx.textAlign = "right"; text(ctx, ammo, x + 123, sy + 3, reloading ? "#ffb030" : (dry && w.ammo <= 0) ? "#ff4a4a" : empty || dry ? "#ff7a5a" : "#e8e2f6"); ctx.textAlign = "left";
+      const at = res !== Infinity ? ammoTypeOf(w) : null;   // Rút Quân: vạch màu = loại đạn của khẩu này
+      if (at) { ctx.fillStyle = AMMO_TYPES[at].color; ctx.fillRect(x + 120 - tw, sy + 3, 2, 7); }
       if (reloading && w.reload) { ctx.fillStyle = "#ffb030"; ctx.fillRect(x + 39, sy + 11, Math.round(84 * (1 - w.reloadT / w.reload)), 1); }
     } else if (cost) {   // năng lượng mỗi phát — tính theo % thanh năng lượng
       const pc = (cost / p.maxEnergy) * 100;

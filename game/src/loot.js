@@ -11,6 +11,7 @@
 import { WEAPONS, WEAPONS_BY_RARITY, WEAPON_RARITY, drawWeaponFallback, weaponSpan, weaponCenterY } from "./weapons.js";
 import { pick, rand, withAlpha, TAU } from "./util.js";
 import { Pool } from "./pool.js";
+import { AMMO_TYPES, drawAmmoBox } from "./ammo.js";
 
 export const CHEST_TIERS = {
   wood:   { name: "Rương Gỗ",  body: "#73402c", dark: "#3a1f1f", band: "#925737", trim: "#b07246", glow: "#ffd28a", fx: ["#110a10", "#24131a", "#3a1f1f", "#552d24", "#73402c", "#925737", "#b07246"] },
@@ -28,6 +29,7 @@ export const ITEMS = {
   heart:       { name: "Tim Nhỏ +1",        color: "#ff5a6a" },
   potionEnergy:{ name: "Bình Năng Lượng +60", color: "#4aa8ff" },
   weapon:      { name: "Vũ khí",            color: "#ffffff" },
+  ammo:        { name: "Hộp Đạn",           color: "#e2c878" },   // Rút Quân: tên/màu thật theo loại đạn (src/ammo.js)
 };
 
 /** Bốc 1 vũ khí theo bảng tỉ lệ độ hiếm, ví dụ { common: 60, rare: 30, epic: 10 } */
@@ -101,9 +103,18 @@ export class Pickup {
     this.radius = 8;
     this.dead = false;
     this.blockedUntilLeave = !!opts.blockedUntilLeave;
+    this.ammo = opts.ammo ?? null;   // hộp đạn: { t: loại đạn, n: số viên }
   }
-  get label() { return this.kind === "weapon" ? (this.weapon.label ?? this.weapon.name) : ITEMS[this.kind].name; }
-  get color() { return this.kind === "weapon" ? WEAPON_RARITY[this.weapon.rarity] ?? this.weapon.color : ITEMS[this.kind].color; }
+  get label() {
+    if (this.kind === "weapon") return this.weapon.label ?? this.weapon.name;
+    if (this.kind === "ammo") return `${AMMO_TYPES[this.ammo.t].name} +${this.ammo.n}`;
+    return ITEMS[this.kind].name;
+  }
+  get color() {
+    if (this.kind === "weapon") return WEAPON_RARITY[this.weapon.rarity] ?? this.weapon.color;
+    if (this.kind === "ammo") return AMMO_TYPES[this.ammo.t].color;
+    return ITEMS[this.kind].color;
+  }
 
   update(dt, game) {
     this.age += dt;
@@ -118,7 +129,7 @@ export class Pickup {
   draw(c, time) {
     const x = Math.round(this.x), y = Math.round(this.y - 4 + Math.sin(time * 4 + this.x) * 1.5);
     c.fillStyle = "rgba(0,0,0,0.3)"; c.fillRect(x - 5, Math.round(this.y), 10, 2);
-    const col = this.kind === "weapon" ? this.weapon.color : ITEMS[this.kind].color;
+    const col = this.kind === "weapon" ? this.weapon.color : this.color;
     c.fillStyle = withAlpha(col, 0.22 + 0.12 * Math.sin(time * 6));
     c.fillRect(x - 9, y - 9, 18, 14);
     // vũ khí từ Hiếm trở lên: cột sáng màu độ hiếm
@@ -128,6 +139,7 @@ export class Pickup {
       c.fillStyle = withAlpha(rc, 0.4); c.fillRect(x - 1, y - 40, 2, 36);
     }
     switch (this.kind) {
+      case "ammo": drawAmmoBox(c, this.ammo.t, x, y + 3); break;
       case "potionHp": case "potionArmor": case "rage": case "potionEnergy": {
         c.fillStyle = "#0e0c14"; c.fillRect(x - 4, y - 6, 8, 9); c.fillRect(x - 2, y - 9, 4, 3);
         c.fillStyle = "#e8e2f6"; c.fillRect(x - 1, y - 8, 2, 2);
