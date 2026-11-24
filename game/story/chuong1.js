@@ -362,7 +362,7 @@ export default {
       ["sfx", "door"],
       ["say", "nhu", "Vào nhanh!!"],
       ["fade", "out", 1.2],
-      ["end", { title: "HẾT CHƯƠNG MẪU", kicker: "Chương 1 · Đêm ở giảng đường", text: "Minh Huy đã tới được thư viện, nơi Nhu, Trung và những người còn lại đang trốn.\n\n*Đây là chương mẫu để chạy thử hệ thống — kịch bản chính thức sẽ được cập nhật.*" }],
+      ["end", { title: "HẾT CHƯƠNG MẪU", kicker: "Chương 1 · Đêm ở giảng đường", text: "Minh Huy đã tới được thư viện, nơi Nhu, Trung và những người còn lại đang trốn." }],
     ],
   },
 };
