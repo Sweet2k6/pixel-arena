@@ -48,6 +48,11 @@ export class StoryUI {
     this.bag.addEventListener("pointerdown", (e) => { e.stopPropagation(); this.onBag?.(); });
     this.root.append(this.title, this.bag, this.dlg, this.note, this.inv, this.over);
     this.cur = null;       // widget đang mở: { kind, resolve, ... }
+    // ĐIỆN THOẠI: đang hội thoại thì chạm BẤT KỲ ĐÂU trên màn hình là sang câu tiếp
+    this.root.addEventListener("pointerdown", (e) => {
+      if (e.target !== this.root) return;
+      if (this.cur?.kind === "say") this.advance();
+    });
   }
 
   show() { this.root.classList.remove("hidden"); }
@@ -140,7 +145,7 @@ export class StoryUI {
   showNote(title, text, kind = "paper") {
     this.show();
     this.noteCard.className = `sn-card sn-${kind}`;
-    this.noteCard.innerHTML = `<h3>${esc(title)}</h3><div class="sn-text">${rich(text)}</div><p class="sn-hint">E / Enter / bấm để đóng</p>`;
+    this.noteCard.innerHTML = `<h3>${esc(title)}</h3><div class="sn-text">${rich(text)}</div><p class="sn-hint">Chạm / E / Enter để đóng</p>`;
     this.note.classList.remove("hidden");
     return new Promise((resolve) => { this.cur = { kind: "note", resolve }; });
   }
@@ -213,6 +218,7 @@ export class StoryUI {
       if (n >= this.plain.length) { this.typing = false; this.dlgText.innerHTML = this.full; this.dlgMore.classList.remove("hidden"); }
       else { this.dlgText.textContent = this.plain.slice(0, n).replace(/\*\*|\*|\[\/?r\]/g, ""); if (n % 3 === 0 && n !== this.lastBlip) { this.lastBlip = n; this.onBlip?.(); } }
     }
+    this.root.classList.toggle("tap", c?.kind === "say");
     if (!c) return false;
     const go = k.has("e") || k.has("enter") || k.has(" ") || k.has("mouse1x");
     if (c.kind === "say") { if (go) this.advance(); return true; }

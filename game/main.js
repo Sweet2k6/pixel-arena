@@ -790,6 +790,8 @@ const SKILL_HANDLERS = {
 // =====================================================================================
 // 8. NGƯỜI CHƠI
 // =====================================================================================
+const busyMove = (p) => !!(p.dash || p.roll || p.shy);
+
 class Player {
   /** boost: nâng cấp vĩnh viễn từ Sảnh chờ { hp, armor, cd, weapon, secondary } (xem src/progress.js) */
   constructor(char, spawn, boost = {}) {
@@ -1007,7 +1009,16 @@ class Player {
     this.kx *= Math.pow(0.001, dt); this.ky *= Math.pow(0.001, dt);
 
     // --- Súng máy: giữ cò thì nòng quay nhanh dần, thả ra thì chậm lại ---
-    const firing = !locked && input.mouse.left && !this.dash && !this.roll && !this.shy;
+    let firing = !locked && input.mouse.left && !this.dash && !this.roll && !this.shy;
+    // CỐT TRUYỆN: bắn TỪNG PHÁT (giữ chuột không xả liên tục — đạn hiếm). Điện thoại: chạm nút BẮN = 1 phát
+    if (ST) {
+      const tap = TOUCH ? input.pressed.has("fire") : firing && !this.heldFire;
+      this.heldFire = !TOUCH && input.mouse.left;
+      if (tap && !locked && !busyMove(this)) this.fireQueued = 0.25;   // chạm hơi sớm (đang hồi) vẫn được tính
+      this.fireQueued = Math.max(0, (this.fireQueued ?? 0) - dt);
+      firing = this.fireQueued > 0 && this.fireTimer <= 0;
+      if (firing) this.fireQueued = 0;
+    }
     if (this.weapon.spinUp) this.spin = clamp(this.spin + (firing ? dt / this.weapon.spinUp : -dt * 1.5), 0, 1);
     else this.spin = 0;
 

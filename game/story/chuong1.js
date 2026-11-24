@@ -40,7 +40,7 @@ export default {
   title: "Đêm Ở Giảng Đường",
   short: "Chương 1",
   teaser: "Minh Huy ngủ quên trong phòng học tối. Khi tỉnh dậy, ngôi trường đã không còn như trước...",
-  sample: true,                       // chương mẫu (chờ kịch bản thật)
+  sample: false,
   hero: "tingo",                     // Minh Huy
   loadout: { weapons: [{ id: "gBaton", name: "Cán Chổi" }], ammo: { pistol: 0 } },
   zombieHp: 2.4,                      // máu zombie x2.4 so với chế độ Giải Trí
@@ -225,7 +225,7 @@ export default {
   events: {
     intro: [
       ["fade", "out", 0.01],
-      ["title", "ĐÊM Ở GIẢNG ĐƯỜNG", "Chương 1 · bản mẫu", 3.6],
+      ["title", "ĐÊM Ở GIẢNG ĐƯỜNG", "Chương 1", 3.6],
       ["thunder"],
       ["fade", "in", 2],
       ["think", "tingo", "Ưm... mấy giờ rồi..."],
@@ -237,7 +237,9 @@ export default {
       ["say", { name: "Tin nhắn — Nhu", char: "nhu" }, "Huy ơi ông đâu rồi??? Trường có chuyện rồi, ĐỪNG ra hành lang!!\nTụi tui đang trốn ở **thư viện tầng 1**"],
       ["say", "tingo", "Chuyện gì mà nghe ghê vậy trời..."],
       ["objective", "Tìm đường xuống thư viện tầng 1"],
-      ["banner", "WASD: đi · Chuột: soi đèn pin / ngắm · E: xem, nhặt · Tab: túi đồ", "#c8c0d8"],
+      ["if", (s) => s.game.touchMode,
+        [["banner", "Cần trái: đi · Cần phải: soi đèn pin · Nút E: xem, nhặt, nói chuyện", "#c8c0d8"]],
+        [["banner", "WASD: đi · Chuột: soi đèn pin / ngắm · E: xem, nhặt · Tab: túi đồ", "#c8c0d8"]]],
     ],
     cuaso: [
       ["say", "", "Mưa trắng trời. Sân trường tối om."],
@@ -261,7 +263,9 @@ export default {
       ["say", "tingo", "Ê! Bạn gì ơi!"],
       ["sfx", "growl"],
       ["think", "tingo", "Không trả lời... Có gì đó không ổn."],
-      ["banner", "Chuột trái: đánh · Shift: lướt né · R: nạp đạn · Q: đổi vũ khí", "#c8c0d8"],
+      ["if", (s) => s.game.touchMode,
+        [["banner", "Nút BẮN: mỗi lần chạm 1 phát · LƯỚT: né · R: nạp đạn", "#c8c0d8"]],
+        [["banner", "Chuột trái: bắn từng phát · Shift: lướt né · R: nạp đạn · Q: đổi vũ khí", "#c8c0d8"]]],
     ],
     baove: [
       ["if", "co_sung", [["say", "", "Thi thể bác bảo vệ. Không nên nhìn lâu."]], [
@@ -277,7 +281,7 @@ export default {
         ["say", "", "Nhặt được **Súng lục** (6 viên trong băng) và **6 viên đạn** dự trữ."],
         ["note", "Sổ trực của bảo vệ", "21:40 — Có tiếng la hét ở nhà vệ sinh nam tầng 2.\n22:05 — Sinh viên cắn người. Đã **khóa cổng cầu thang**, chìa cất trong **tủ hồ sơ phòng Giáo Vụ**.\n22:10 — Để quên chìa phòng Giáo Vụ trong **nhà vệ sinh nam**. Trời ơi.\n22:1"],
         ["objective", "Tìm chìa khóa phòng Giáo Vụ (nhà vệ sinh nam)"],
-        ["banner", "Đạn có hạn — bắn cho chắc! Q: đổi sang cán chổi", "#ffe9a8"],
+        ["banner", "Đạn có hạn — bắn cho chắc! Đổi súng: về cán chổi", "#ffe9a8"],
       ]],
     ],
     maybannuoc: [
@@ -362,7 +366,7 @@ export default {
       ["sfx", "door"],
       ["say", "nhu", "Vào nhanh!!"],
       ["fade", "out", 1.2],
-      ["end", { title: "HẾT CHƯƠNG MẪU", kicker: "Chương 1 · Đêm ở giảng đường", text: "Minh Huy đã tới được thư viện, nơi Nhu, Trung và những người còn lại đang trốn." }],
+      ["end", { title: "HẾT CHƯƠNG 1", kicker: "Chương 1 · Đêm ở giảng đường", text: "Minh Huy đã tới được thư viện, nơi Nhu, Trung và những người còn lại đang trốn." }],
     ],
   },
 };

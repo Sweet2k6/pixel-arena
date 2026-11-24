@@ -1120,3 +1120,31 @@ body.is-touch button { touch-action: manipulation; }
 .su-bag { position: absolute; right: 0.6em; top: 3.1em; display: flex; flex-direction: column; align-items: center; padding: 0.2em 0.45em; font-size: 0.85em; line-height: 1.1; background: rgba(16, 10, 18, 0.7); border: 0.1em solid #3a2a38; color: #d8d0e0; }
 .su-bag small { font-size: 0.5em; color: #9a8ea8; }
 .story-ui:has(.sd-box:not(.hidden)) .su-bag, .story-ui:has(.so-wrap:not(.hidden)) .su-bag { display: none; }
+
+/* ---------------- ĐIỆN THOẠI · CỐT TRUYỆN: bắn từng phát, nút hồi máu / nạp đạn, nút E ghi rõ việc ---------------- */
+.t-fire, .t-heal, .t-reload2 { display: none; }
+.touch-ui.story .t-fire, .touch-ui.story .t-heal, .touch-ui.story .t-reload2 { display: grid; }
+.touch-ui.story .t-merge { display: none; }
+.t-fire { top: 70%; right: 0.8em; width: 5.8em; height: 5.8em; font-size: 1.1em; color: #ff8a7a; border-color: #c8303a; background: radial-gradient(circle at 35% 30%, rgba(140, 40, 50, 0.92), rgba(40, 10, 16, 0.9)); }
+.t-heal { top: 74%; right: 8.4em; width: 4em; height: 4em; color: #7cff9a; border-color: #3a8a4a; }
+.t-reload2 { top: 74%; right: 13.2em; width: 3.6em; height: 3.6em; color: #ffe9a8; border-color: #8a7a3a; }
+.touch-ui.story .stick-aim.idle { left: 58%; top: 46%; }
+.touch-ui.story .t-use { width: 5em; height: 5em; right: 6.2em; top: 27%; }
+.touch-ui.story .t-use small { max-width: 7em; font-size: 0.5em; white-space: nowrap; overflow: hidden; }
+.touch-ui.story .t-use.ready { border-color: var(--gold); color: var(--gold); animation: useReady 0.7s ease-in-out infinite alternate; }
+.touch-ui.story .t-use.ready small { color: var(--gold); }
+@keyframes useReady { from { box-shadow: 0 0 0.2em rgba(255, 226, 107, 0.4); } to { box-shadow: 0 0 1.2em rgba(255, 226, 107, 0.9); } }
+.story-ui.tap { pointer-events: auto; }
+@media (hover: none) and (pointer: coarse) {
+  .sd-box { left: 0.6em; right: 0.6em; bottom: 0.5em; min-height: 7.6em; }
+  .sd-text { font-size: 0.95em; }
+  .sd-name { font-size: 0.85em; }
+  .sd-choices { gap: 0.4em; }
+  .sd-choices button { font-size: 0.95em; padding: 0.55em 0.8em; background: rgba(60, 30, 40, 0.6); border-left-width: 0.3em; }
+  .su-bag { top: 4.4em; left: 0.6em; right: auto; flex-direction: row; gap: 0.3em; padding: 0.35em 0.7em; font-size: 1.05em; }
+  .su-bag small { font-size: 0.6em; }
+  .si-card { width: 52em; font-size: 1.08em; }
+  .si-item button { padding: 0.45em 0.9em; }
+  .sn-card { width: 34em; }
+  .ch-btns button { font-size: 0.8em; padding: 0.5em 1em; }
+}

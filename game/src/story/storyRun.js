@@ -601,7 +601,7 @@ export class StoryRun {
     }
     // đồ hồi máu
     const heals = Object.keys(this.S.inv).filter((id) => this.items[id]?.heal).reduce((n, id) => n + this.S.inv[id], 0);
-    HUD.text(c, `Hồi máu x${heals} [F] · Túi đồ [Tab]`, 6, 41, "#9a92b4");
+    if (!g.touchMode) HUD.text(c, `Hồi máu x${heals} [F] · Túi đồ [Tab]`, 6, 41, "#9a92b4");
     // nơi đang đứng
     c.textAlign = "right";
     HUD.text(c, this.def.name ?? "", W - 6, 6, "#c8c0d8");

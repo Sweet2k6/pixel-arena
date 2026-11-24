@@ -39,10 +39,14 @@ export class TouchControls {
       <div class="stick stick-aim idle"><div class="knob"></div><span class="stick-label">NGẮM · BẮN</span></div>
       <button type="button" class="tbtn t-pause" data-key="p" aria-label="Tạm dừng">❚❚</button>
       <button type="button" class="tbtn t-swap" data-key="q" aria-label="Đổi vũ khí">⇄<small>ĐỔI SÚNG</small></button>
-      <button type="button" class="tbtn t-use disabled" data-key="e" aria-label="Nhặt / tương tác">E<small>NHẶT</small></button>
+      <button type="button" class="tbtn t-use disabled" data-key="e" aria-label="Nhặt / tương tác">E<small class="t-use-lb">NHẶT</small></button>
       <button type="button" class="tbtn t-merge hidden" data-key="g" aria-label="Ghép vũ khí">⚒<small>GHÉP</small></button>
       <button type="button" class="tbtn t-skill" data-key=" " aria-label="Kỹ năng"><span class="cd"></span>★<small>KỸ NĂNG</small></button>
       <button type="button" class="tbtn t-dash" data-key="shift" aria-label="Lướt"><span class="cd"></span>»<small>LƯỚT</small></button>
+      <!-- CỐT TRUYỆN: bắn từng phát (chạm 1 lần = 1 viên), hồi máu, nạp đạn -->
+      <button type="button" class="tbtn t-fire" data-key="fire" aria-label="Bắn">✦<small>BẮN</small></button>
+      <button type="button" class="tbtn t-heal" data-key="f" aria-label="Hồi máu">✚<small>HỒI MÁU</small></button>
+      <button type="button" class="tbtn t-reload2" data-key="r" aria-label="Nạp đạn">R<small>NẠP ĐẠN</small></button>
       <div class="t-bagrow hidden" aria-label="Túi Chiến Thuật">
         <button type="button" class="t-bag empty" data-key="z" aria-label="Ô túi 1"></button>
         <button type="button" class="t-bag empty" data-key="x" aria-label="Ô túi 2"></button>
@@ -53,7 +57,7 @@ export class TouchControls {
       <div class="t-pausemenu hidden">
         <p>TẠM DỪNG</p>
         <button type="button" class="btn-start t-resume">TIẾP TỤC</button>
-        <button type="button" class="btn-secondary t-home">VỀ SẢNH CHỜ</button>
+        <button type="button" class="btn-secondary t-home">VỀ MENU</button>
       </div>`;
     this.stage.append(root);
     this.root = root;
@@ -61,7 +65,7 @@ export class TouchControls {
       zl: root.querySelector(".tz-left"), zr: root.querySelector(".tz-right"),
       move: root.querySelector(".stick-move"), aim: root.querySelector(".stick-aim"),
       skill: root.querySelector(".t-skill"), dash: root.querySelector(".t-dash"), swap: root.querySelector(".t-swap"),
-      use: root.querySelector(".t-use"), merge: root.querySelector(".t-merge"),
+      use: root.querySelector(".t-use"), useLb: root.querySelector(".t-use-lb"), merge: root.querySelector(".t-merge"),
       pauseMenu: root.querySelector(".t-pausemenu"),
       bagRow: root.querySelector(".t-bagrow"), bags: [...root.querySelectorAll(".t-bag")],
     };
@@ -72,7 +76,7 @@ export class TouchControls {
     });
     this.bindStick(this.el.zr, this.el.aim, (x, y, on) => {
       const m = Math.hypot(x, y);
-      if (on && m > DEAD) { this.input.touchAim = Math.atan2(y, x); this.input.mouse.left = true; }
+      if (on && m > DEAD) { this.input.touchAim = Math.atan2(y, x); this.input.mouse.left = !this.story; }   // cốt truyện: cần chỉ để NGẮM, bắn bằng nút BẮN
       else { if (!on) this.input.touchAim = null; this.input.mouse.left = false; }
     });
     // Nút bấm: chạm = nhấn phím tương ứng
@@ -131,7 +135,9 @@ export class TouchControls {
 
   /** Gọi mỗi frame: ẩn/hiện, vòng hồi chiêu trên nút */
   sync(game, playing) {
-    const show = playing && !game.choosing && !game.shopping;
+    const S = game.story, talk = !!(S && (S.paused || S.lockInput || S.ended || game.storyUI?.busy));   // đang hội thoại / diễn cảnh: ẩn nút
+    const show = playing && !game.choosing && !game.shopping && !talk;
+    if (!!S !== this.story) { this.story = !!S; this.root.classList.toggle("story", this.story); this.root.querySelector(".stick-aim .stick-label").textContent = S ? "NGẮM · ĐÈN PIN" : "NGẮM · BẮN"; }
     if (show !== this.visible) {
       this.visible = show;
       this.root.classList.toggle("hidden", !show);
@@ -145,6 +151,9 @@ export class TouchControls {
     this.el.dash.style.setProperty("--cd", String(p.rollCd / p.rollCdMax));
     this.el.swap.classList.toggle("disabled", !p.weapons[1]);
     this.el.use.classList.toggle("disabled", !game.interactTarget);
+    this.el.use.classList.toggle("ready", !!(S && game.interactTarget));
+    const lb = S && game.interactTarget ? String(game.interactTarget.label ?? "XEM").toUpperCase().slice(0, 14) : "NHẶT";
+    if (this.el.useLb.textContent !== lb) this.el.useLb.textContent = lb;
     this.el.merge.classList.toggle("hidden", !p.mergeable);
     // Rút Quân: 4 nút Túi Chiến Thuật + nút nạp đạn (vẽ lại icon khi túi thay đổi)
     const run = game.run;
