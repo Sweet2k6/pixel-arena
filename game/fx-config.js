@@ -136,6 +136,7 @@ export const EFFECTS = {
 // =====================================================================================
 //  NHÂN VẬT & QUÁI (AnimationController)
 //    kind "chibi"   — nhân vật đầu to kiểu Soul Knight vẽ bằng code (src/chibi.js): 3 hàng idle / run / skill
+//    kind "human"   — người tỉ lệ thật vẽ bằng code (src/human.js) — nhóm SINH VIÊN (khối `human` trong students.js)
 //    kind "sheet"   — SPRITESHEET CỦA BẠN (khối `spritesheet` trong characters.js, ví dụ Bạch Ngưng Băng)
 //    kind "critter" — quái pixelfx lặp (Slime, Dơi, Ma): 1 hàng "move"
 //    kind "hero"    — người pixel cao gầy kiểu cũ (bộ xương pixelfx), vẫn dùng được nếu muốn
@@ -169,7 +170,9 @@ export const ACTORS = {
   // các nhân vật chơi được (ngoại hình chibi lấy từ khối `chibi` trong characters.js)
   ...Object.fromEntries(CHARACTERS.map((c) => [c.id, c.spritesheet
     ? { kind: "sheet", ...c.spritesheet }
-    : { kind: "chibi", src: `assets/images/actors/${c.id}.png`, look: c.chibi }])),
+    : c.human
+      ? { kind: "human", src: `assets/images/actors/${c.id}.png`, look: c.human }
+      : { kind: "chibi", src: `assets/images/actors/${c.id}.png`, look: c.chibi }])),
   // skin phụ của nhân vật (khối `skins` trong characters.js): tên "<id>#1", "<id>#2"...
   ...Object.fromEntries(CHARACTERS.flatMap((c) => (c.spritesheet && c.skins ? c.skins : []).map((sk, i) => [`${c.id}#${i + 1}`, { kind: "sheet", ...c.spritesheet, ...sk }]))),
   archer: { kind: "chibi", src: "assets/images/actors/archer.png", look: LOOKS.archer },

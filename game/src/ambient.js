@@ -67,7 +67,9 @@ export class LightLayer {
     g.fillRect(0, 0, this.w, this.h);
     g.globalCompositeOperation = "destination-out";
     for (let i = 0; i < lights.length; i++) {
-      const L = lights[i], s = this.stamp(L.r);
+      const L = lights[i];
+      if (L.cone) { this.cone(g, L, ox, oy); continue; }   // ĐÈN PIN hình nón (chế độ Cốt Truyện)
+      const s = this.stamp(L.r);
       g.globalAlpha = Math.min(1, L.a ?? 1);
       g.drawImage(s, Math.round(L.x - ox - s.width / 2), Math.round(L.y - oy - s.height / 2));
     }
@@ -79,6 +81,11 @@ export class LightLayer {
     for (let i = 0; i < lights.length; i++) {
       const L = lights[i];
       if (!L.color || L.glow === 0) continue;
+      if (L.cone) {   // ánh vàng ấm của đèn pin
+        ctx.globalAlpha = (L.glow ?? 0.06) * Math.min(1, L.a ?? 1);
+        this.coneShape(ctx, L, ox, oy, L.color, 0.85);
+        continue;
+      }
       const s = this.stamp(L.r * 0.75, L.color);
       ctx.globalAlpha = (L.glow ?? 0.14) * Math.min(1, L.a ?? 1);
       ctx.drawImage(s, Math.round(L.x - ox - s.width / 2), Math.round(L.y - oy - s.height / 2));
@@ -86,6 +93,26 @@ export class LightLayer {
     ctx.restore();
   }
 }
+
+/**
+ * Nón sáng: L.cone = { ang, spread } (radian, nửa góc mở). Mép mềm: 3 lớp nón hẹp dần, sáng dần về tâm,
+ * mờ dần theo khoảng cách (gradient tròn). Đục vào lớp tối (destination-out).
+ */
+LightLayer.prototype.cone = function (g, L, ox, oy) {
+  const a = Math.min(1, L.a ?? 1);
+  for (const [k, al] of [[1.25, 0.35], [1, 0.6], [0.6, 1]]) { g.globalAlpha = a * al; this.coneShape(g, L, ox, oy, "#000", 1, k); }
+};
+LightLayer.prototype.coneShape = function (g, L, ox, oy, color, power = 1, widen = 1) {
+  const x = L.x - ox, y = L.y - oy, r = L.r, { ang, spread } = L.cone, sp = spread * widen;
+  const grd = g.createRadialGradient(x, y, 2, x, y, r);
+  const [cr, cg, cb] = color === "#000" ? [0, 0, 0] : hexRgb(color);
+  grd.addColorStop(0, `rgba(${cr},${cg},${cb},${power})`);
+  grd.addColorStop(0.55, `rgba(${cr},${cg},${cb},${power * 0.8})`);
+  grd.addColorStop(0.85, `rgba(${cr},${cg},${cb},${power * 0.35})`);
+  grd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+  g.fillStyle = grd;
+  g.beginPath(); g.moveTo(x, y); g.arc(x, y, r, ang - sp, ang + sp); g.closePath(); g.fill();
+};
 
 /** Viền tối 4 góc (vẽ sẵn 1 lần) */
 export function makeVignette(w, h, strength = 0.42) {

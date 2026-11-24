@@ -28,6 +28,10 @@ export const STAT_MAX = { hp: 10, armor: 10, speed: 130 };
  */
 export const ARMOR_REGEN = { delay: 3, interval: 0.6 };
 
+// 9 nhân vật SINH VIÊN (tỉ lệ người thật) nằm riêng trong students.js — được nối vào cuối danh sách bên dưới
+import { STUDENTS } from "./students.js";
+import { CLASSMATES } from "./classmates.js";   // 23 bạn cùng lớp (nhân vật phụ)
+
 export const CHARACTERS = [
   // -----------------------------------------------------------------------------------
   // NHÂN VẬT 1 — XẠ THỦ (kiểu Knight của Soul Knight): cân bằng, bắn súng
@@ -188,7 +192,7 @@ export const CHARACTERS = [
   // NHÂN VẬT 4 — THANH XUÂN: tay không bắn gai băng, đóng băng quái; tuyệt chiêu Ngại Ngùng
   // -----------------------------------------------------------------------------------
   {
-    id: "thanhxuan",
+    id: "thanhxuan", group: "student",   // Bạch Ngưng Băng = Thanh Xuân (nhân vật chính)
     name: "Bạch Ngưng Băng",
     title: "Cô nàng băng giá hay ngại",
     desc: "Đeo balo đi học mà lạc vào hầm ngục. Tay không bắn gai băng đóng băng quái; hễ ngại là trời đất nổi băng sét.",
@@ -420,7 +424,7 @@ export const CHARACTERS = [
   //              bù lại nhỏ con khó trúng + lục đồ cực nhanh (hợp chế độ Rút Quân). Sợ quá thì xả đạn loạn xạ.
   // -----------------------------------------------------------------------------------
   {
-    id: "tingo",
+    id: "tingo", group: "student",
     name: "Minh Huy",
     title: "Tân binh run rẩy",
     desc: "Lính mới lùn tịt, tóc ngố bết mồ hôi, hai răng thỏ, đôi giày trắng tinh. Máu mỏng, bắn yếu, tay run — nhưng nhỏ con khó trúng và lục đồ cực nhanh. Sợ quá thì nhắm mắt xả đạn loạn xạ.",
@@ -459,4 +463,16 @@ export const CHARACTERS = [
       color: "#ffd27a",
     },
   },
+  // ---------------- NHÓM SINH VIÊN (students.js) ----------------
+  ...STUDENTS,
+  // ---------------- BẠN CÙNG LỚP — nhân vật phụ (classmates.js) ----------------
+  ...CLASSMATES,
 ];
+
+/** Nhóm hiển thị ở màn chọn nhân vật (Giải Trí): "student" nhóm chính · "classmate" bạn cùng lớp · còn lại "hero" */
+export const CHAR_GROUPS = [
+  { id: "student", name: "Nhóm Sinh Viên" },
+  { id: "classmate", name: "Bạn Cùng Lớp" },
+  { id: "hero", name: "Anh Hùng Giả Tưởng" },
+];
+export const groupOf = (c) => c.group ?? "hero";

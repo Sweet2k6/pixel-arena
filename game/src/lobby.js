@@ -35,8 +35,13 @@ const SOLIDS = [
   { x: 432, y: 236, w: 30, h: 24 },   // chậu cây góc dưới phải
   { x: 16, y: 150, w: 14, h: 30 },    // lò sưởi tường trái
 ];
-/** Chỗ đứng của 8 nhân vật (vòng cung quanh tấm thảm) */
-const HOMES = [[176, 150], [304, 150], [124, 196], [356, 196], [172, 238], [308, 238], [240, 246], [404, 162], [76, 162], [240, 136]];
+/** Chỗ đứng: 9 nhân vật đầu tiên vòng cung quanh tấm thảm, nhóm SINH VIÊN đứng vòng ngoài (sát tường, 2 góc dưới) */
+const HOMES = [
+  [176, 152], [304, 152], [124, 198], [356, 198], [172, 240], [308, 240], [240, 250], [404, 164], [76, 164],
+  [300, 122], [124, 124], [180, 116], [36, 214], [80, 234], [408, 214], [24, 138], [456, 214], [120, 242],
+];
+/** Độ cao đỉnh đầu (để đặt tên / mũi tên): người tỉ lệ thật cao hơn chibi */
+const headTop = (c) => (c.human ? c.human.height + 6 : 33);
 
 export class Lobby {
   /**
@@ -226,14 +231,14 @@ export class Lobby {
     ctx.font = "7px monospace"; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
     for (const c of this.chars) {
       const isNear = this.near?.kind === "char" && this.near.ref === c;
-      if (c === me) { const by = Math.round(c.y - 36 + Math.sin(t * 6) * 1.5); ctx.fillStyle = "#ffe26b"; ctx.fillRect(c.x - 2, by, 5, 1); ctx.fillRect(c.x - 1, by + 1, 3, 1); ctx.fillRect(c.x, by + 2, 1, 1); continue; }
-      hudText(ctx, c.char.name, Math.round(c.x), Math.round(c.y - 33), isNear ? "#ffe26b" : "rgba(220,210,240,0.75)");
+      if (c === me) { const by = Math.round(c.y - headTop(c.char) - 3 + Math.sin(t * 6) * 1.5); ctx.fillStyle = "#ffe26b"; ctx.fillRect(c.x - 2, by, 5, 1); ctx.fillRect(c.x - 1, by + 1, 3, 1); ctx.fillRect(c.x, by + 2, 1, 1); continue; }
+      hudText(ctx, c.char.name, Math.round(c.x), Math.round(c.y - headTop(c.char)), isNear ? "#ffe26b" : "rgba(220,210,240,0.75)");
     }
     for (const s of STATIONS) hudText(ctx, s.name, s.id === "portal" ? 240 : s.x, s.id === "portal" ? 98 : 104, this.near?.ref === s ? "#ffe26b" : withAlpha(s.light, 0.9));
     if (this.near && !this.blocked) {
       const n = this.near, touch = info?.touch;
       const label = n.kind === "char" ? `${touch ? "Chạm" : "[E]"} Điều khiển ${n.ref.char.name}` : `${touch ? "Chạm" : "[E]"} ${n.ref.name} — ${n.ref.hint}`;
-      const x = n.kind === "char" ? n.ref.x : n.ref.x, y = n.kind === "char" ? n.ref.y - 42 : n.ref.y + 22;
+      const x = n.kind === "char" ? n.ref.x : n.ref.x, y = n.kind === "char" ? n.ref.y - headTop(n.ref.char) - 9 : n.ref.y + 22;
       const w = ctx.measureText(label).width + 8, bx = clamp(Math.round(x - w / 2), 2, W - w - 2);
       ctx.fillStyle = "rgba(12,10,20,0.85)"; ctx.fillRect(bx, y - 10, w, 11);
       ctx.fillStyle = "#ffe26b"; ctx.fillRect(bx, y + 1, w, 1);

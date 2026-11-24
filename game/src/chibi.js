@@ -19,7 +19,7 @@ const tone = (h) => { const c = rgb(h); return { mid: c, hi: mixc(c, [255, 255, 
 const INK = [22, 16, 30];
 
 /** 1 lớp vẽ: mặt nạ + màu, toạ độ tính từ CHÂN nhân vật (x sang phải, y âm là lên trên) */
-class Layer {
+export class Layer {
   constructor() { this.px = new Map(); }
   key(x, y) { return `${x},${y}`; }
   set(x, y, c) { this.px.set(this.key(Math.round(x), Math.round(y)), { x: Math.round(x), y: Math.round(y), c }); }
@@ -56,7 +56,7 @@ class Layer {
 }
 
 /** Ghép các lớp (sau -> trước) vào ảnh RGBA; mỗi lớp được viền mực 1px trước khi vẽ */
-function compose(layers, rgba, W, H, ax, ay, outline = true) {
+export function compose(layers, rgba, W, H, ax, ay, outline = true) {
   const put = (x, y, c) => {
     const X = ax + x, Y = ay + y;
     if (X < 0 || Y < 0 || X >= W || Y >= H) return;

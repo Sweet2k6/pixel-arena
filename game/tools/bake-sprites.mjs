@@ -19,6 +19,7 @@ const GAME = join(dirname(fileURLToPath(import.meta.url)), "..");
 const { EFFECTS, ACTORS } = await import(pathToFileURL(join(GAME, "fx-config.js")).href);
 const { bakeEffect, bakeDust, bakeHero } = await import(pathToFileURL(join(GAME, "src", "fxbake.js")).href);
 const { bakeChibi } = await import(pathToFileURL(join(GAME, "src", "chibi.js")).href);
+const { bakeHuman } = await import(pathToFileURL(join(GAME, "src", "human.js")).href);
 const ATLAS_FILE = join(GAME, "src", "fx-atlas.generated.js");
 
 // ---------- PNG (RGBA 8 bit) — theo pixelfx-main/tools/lib/png.mjs, MIT License ----------
@@ -77,6 +78,7 @@ for (const [name, cfg] of Object.entries(ACTORS)) {
   if (only.size && !only.has(name)) continue;
   if (cfg.kind === "sheet" || !ours(cfg.src)) { console.log(`  ${name}: dùng spritesheet riêng (${cfg.src || "trống"}) — bỏ qua`); continue; }
   if (cfg.kind === "chibi") save(`actor:${name}`, cfg.src, bakeChibi(cfg.look));
+  else if (cfg.kind === "human") save(`actor:${name}`, cfg.src, bakeHuman(cfg.look));
   else if (cfg.kind === "hero") save(`actor:${name}`, cfg.src, bakeHero(cfg.look));
   else {
     const s = bakeEffect(cfg.pixelfx, { options: cfg.options, ...(cfg.bake ?? {}) });

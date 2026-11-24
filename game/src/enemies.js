@@ -777,7 +777,7 @@ export class Enemy {
     // >>> XUẤT HIỆN: zombie / quái đi bộ CHUI LÊN TỪ ĐẤT, quái bay hiện dần (0.35 giây đầu, lúc chưa gây sát thương)
     const rise = this.spawnTime > 0 ? Math.min(1, Math.max(0, 1 - this.spawnTime / 0.35)) : 1;
     if (rise < 1) {
-      const walker = !this.cfg.flying && this.sprite.kind === "chibi";
+      const walker = !this.cfg.flying && (this.sprite.kind === "chibi" || this.sprite.kind === "human");
       drawRise(c, x, y, rise, Math.round(30 * s), walker, (dx, dy) => this.drawBody(c, game, x + dx, y + dy, flip, s, sx, sy), this.serial ?? 0);
       return;
     }

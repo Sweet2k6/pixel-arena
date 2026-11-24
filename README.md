@@ -4,6 +4,21 @@ Game đấu trường sinh tồn pixel art 2D (HTML5 Canvas + JavaScript thuần
 
 **▶ Chơi ngay:** https://sweet2k6.github.io/pixel-arena/
 
+## Bản 7.0 — CỐT TRUYỆN KINH DỊ theo chương · MÀN HÌNH CHÍNH MỚI · 22 bạn cùng lớp
+- **Màn hình chính mới** (tên game *Lớp Học Cuối Cùng*): trường đại học về đêm, mưa, sét, cửa sổ chập chờn, bóng zombie lê bước. Chọn **CỐT TRUYỆN** · **GIẢI TRÍ** · **HƯỚNG DẪN** (chuột hoặc phím ↑↓ Enter). Đổi tên game: thẻ `h1` trong `game/index.html`.
+- **Bỏ sảnh chờ**. 2 chế độ cũ (**Nhảy Dù Rút Quân** và **Sinh Tồn Theo Đợt** — trước gọi là Chế Độ Giải Trí) nằm trong **GIẢI TRÍ**: lưới chọn nhân vật chia nhóm, nhân vật đang chọn đứng giữa màn hình, nút Kho Vũ Khí / Nâng Cấp / Chọn Chế Độ. Bỏ dòng mô tả trong thẻ nhân vật.
+- **CỐT TRUYỆN kiểu Nobihaza**: chơi theo chương, khám phá ngôi trường tối om bằng **đèn pin** (soi theo hướng chuột), sét lóe sáng qua cửa sổ, đèn trần chập chờn, zombie đứng rình trong bóng tối (chỉ thấy **mắt đỏ**) và lao tới khi thấy bạn / nghe tiếng súng. Cửa khóa + chìa khóa, tài liệu để đọc, bạn bè để nói chuyện, **hội thoại có chân dung** (chữ HTML sắc nét), lựa chọn, **túi đồ** (Tab / I / nút 🎒), băng gạc (F), **đạn hiếm**, **lưu game ở cuốn nhật ký**, màn *BẠN ĐÃ CHẾT* (tải lần lưu cuối), màn *HẾT CHƯƠNG*. Âm thanh tổng hợp: mưa, ù ù, tim đập khi zombie lại gần, sấm, cửa kẽo kẹt, hù dọa.
+- **Chương 1 (bản mẫu)** *Đêm Ở Giảng Đường*: 5 phòng (phòng học B.204, hành lang tầng 2, nhà vệ sinh nam, phòng Giáo Vụ, sảnh tầng 1) để chạy thử hệ thống — sẽ thay bằng kịch bản thật.
+- **Viết chương mới**: sao chép `game/story/chuong1.js` (đầu file có hướng dẫn đủ: vẽ phòng bằng chữ, cửa, vật phẩm, zombie, sự kiện, lời thoại), thêm vào `game/story/chapters.js` và `CODE_FILES` trong `index.html`.
+- **22 bạn cùng lớp** (nhân vật phụ, không ghi mã số sinh viên) trong `game/classmates.js`: dùng làm nhân vật phụ trong cốt truyện, chọn chơi được ở Giải Trí. Thêm 5 kiểu tóc chung (ngắn, rẽ ngôi lệch, rối, tóc dài, bob). Minh Huy và Bạch Ngưng Băng (Thanh Xuân) xếp vào nhóm nhân vật chính.
+
+## Bản 6.1 — NHÓM 9 SINH VIÊN (vẽ tỉ lệ người thật, không chibi)
+- **9 nhân vật mới**: Diệu Phong, Trung, Phương Duy, Đặng Quyết, Tấn Đô, Vĩnh Thịnh, Nhu, Lê Thịnh, Thiện Nhân — vẽ theo ảnh & mô tả: chiều cao thật (1m67 → 1m80), vóc dáng gầy / thường / béo, kính cận gọng mảnh, nốt ruồi, râu lún phún, khẩu trang, mũ lưỡi trai, ba lô trước ngực, túi đeo chéo, cặp xách ngang, tóc mái chéo / mái bằng / tóc dựng / cạo 2 bên / mì tôm / tóc buộc ngọn vàng / rẽ ngôi bết...
+- Kiểu vẽ mới `src/human.js`: người cao ~3 đầu, **đầu + tóc vẽ tay từng pixel**, viền theo màu của từng mảng. Hoạt ảnh: thở, chớp mắt, **động tác riêng** lúc đứng yên (Thiện Nhân đẩy gọng kính, Phong cười, Trung chống cằm, Duy vuốt tóc, Vĩnh Thịnh nắm quai ba lô, Đô giơ tay, Quyết nghiêng đầu, Nhu ngơ ngác nhìn quanh), chạy, nổi giận, trúng đòn.
+- Kỹ năng tạm thời của cả nhóm: **Cuồng Nộ** (bắn nhanh gấp đôi 4 giây, giống Xạ Thủ). Mỗi người một khẩu súng & chỉ số riêng.
+- Sảnh chờ có thêm chỗ đứng cho 18 nhân vật; tên hiện đúng trên đỉnh đầu.
+- Sửa ngoại hình / chỉ số / kỹ năng: `game/students.js` (khối `human`, `stats`, `weapon`, `skill`), rồi chạy `node game/tools/bake-sprites.mjs phong trung duy quyet tando vinhthinh nhu lethinh thiennhan`.
+
 ## Bản 6.0.1 — MÁU CHÂN THẬT HƠN · sửa lỗi
 - **Máu phun** theo hướng đạn mỗi lần trúng đòn (chí mạng / gục ngã phun nhiều hơn): giọt bay vòng cung rồi **rơi xuống thành giọt loang** có đuôi chỉ hướng bay.
 - **Vết văng có hướng** (8 hướng): tâm loang không đều, giọt nhỏ dần ra xa, giọt to hình giọt nước; **vũng máu loang dần** dưới xác; xác trượt trên nền để lại **vệt kéo lê**.
@@ -104,6 +119,15 @@ Lối chơi chính chuyển sang **Extraction Survival** (ván 5 / 7 / 10 phút)
 | Thợ Săn | Cung Săn (xuyên) | Mưa Tên | 12% chí mạng |
 | Tử Linh Sư | Cầu linh hồn đuổi mục tiêu | Triệu Hồi Vong Linh | 15 quái gục hồi 1 Máu |
 | Bóng Đêm | Phi Tiêu (nảy) | Ảnh Sát (dịch chuyển chém) | 18% chí mạng, lướt hồi nhanh |
+| Diệu Phong | Tiểu Liên Tommy | Cuồng Nộ | Máu trâu (8), chạy chậm |
+| Trung | Súng Trường M24 (chậm, cực chuẩn) | Cuồng Nộ | 15% chí mạng |
+| Phương Duy | Vector Mini (cực nhanh) | Cuồng Nộ | 10% né, chạy nhanh |
+| Đặng Quyết | Súng Trường G36C | Cuồng Nộ | Cân bằng |
+| Tấn Đô | Desert Eagle (đạn nặng) | Cuồng Nộ | Giáp dày, 10% chí mạng |
+| Vĩnh Thịnh | Tiểu Liên P90 | Cuồng Nộ | Ba lô trước ngực: 5% né |
+| Nhu | Súng Tia Ray | Cuồng Nộ | 8% né, nhiều năng lượng |
+| Lê Thịnh | Súng Trường SCAR | Cuồng Nộ | 10% chí mạng |
+| Thiện Nhân | Colt M1911 (chuẩn) | Cuồng Nộ | Giáp dày, 6% né, 12% chí mạng |
 
 ## Điều khiển
 | Phím | Tác dụng |

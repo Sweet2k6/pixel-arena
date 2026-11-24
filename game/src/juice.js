@@ -316,7 +316,7 @@ export class Corpse {
   constructor(e, decals, opts = {}) {
     const S = e.sprite;
     this.sheet = S.sheet; this.flashSheet = S.flash; this.dark = S.sheet.tinted("#1a0e10", 0.35);
-    this.kind = S.kind === "chibi" || e.type === "player" ? "fall" : "squish";   // người chơi luôn ngã gục
+    this.kind = S.kind === "chibi" || S.kind === "human" || e.type === "player" ? "fall" : "squish";   // người chơi luôn ngã gục
     const hurt = S.anims.hurt;
     this.row = hurt ? hurt.row : e.anim.row;
     this.col = hurt ? 1 : e.anim.col;

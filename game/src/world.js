@@ -169,6 +169,9 @@ function drawProp(ctx, o, t, pal) {
 // =====================================================================================
 //  CAMERA — bám theo nhân vật mượt (lerp) và không bao giờ lộ vùng ngoài bản đồ (clamp)
 // =====================================================================================
+/** Giữ camera trong bản đồ; bản đồ NHỎ HƠN khung hình (phòng cốt truyện) thì đặt phòng vào giữa màn hình */
+const camClamp = (v, max) => (max < 0 ? max / 2 : clamp(v, 0, max));
+
 export class Camera {
   constructor(viewW, viewH) {
     this.w = viewW; this.h = viewH;
@@ -180,19 +183,19 @@ export class Camera {
 
   /** Đặt camera ngay lập tức lên mục tiêu (lúc bắt đầu trận) */
   snap(tx, ty) {
-    this.x = clamp(tx - this.w / 2, 0, WORLD.w - this.w);
-    this.y = clamp(ty - this.h / 2, 0, WORLD.h - this.h);
+    this.x = camClamp(tx - this.w / 2, WORLD.w - this.w);
+    this.y = camClamp(ty - this.h / 2, WORLD.h - this.h);
   }
 
   /** Nội suy mượt về phía mục tiêu, nhìn hơi lệch theo hướng ngắm (lookX/lookY) */
   follow(tx, ty, dt, lookX = 0, lookY = 0) {
     const k = 1 - Math.exp(-7 * dt);
-    const gx = clamp(tx + lookX - this.w / 2, 0, WORLD.w - this.w);
-    const gy = clamp(ty + lookY - this.h / 2, 0, WORLD.h - this.h);
+    const gx = camClamp(tx + lookX - this.w / 2, WORLD.w - this.w);
+    const gy = camClamp(ty + lookY - this.h / 2, WORLD.h - this.h);
     this.x += (gx - this.x) * k;
     this.y += (gy - this.y) * k;
-    this.x = clamp(this.x, 0, WORLD.w - this.w);
-    this.y = clamp(this.y, 0, WORLD.h - this.h);
+    this.x = camClamp(this.x, WORLD.w - this.w);
+    this.y = camClamp(this.y, WORLD.h - this.h);
   }
 
   shake(time, amp) { this.shakeTime = Math.max(this.shakeTime, time); this.shakeAmp = Math.max(this.shakeAmp, amp); }

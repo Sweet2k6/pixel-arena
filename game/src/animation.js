@@ -6,6 +6,7 @@
 import { SpriteSheet, canvasFromRGBA } from "./spritesheet.js";
 import { bakeEffect, bakeDust, bakeHero, HERO_FRAME } from "./fxbake.js";
 import { bakeChibi } from "./chibi.js";
+import { bakeHuman } from "./human.js";
 import { ATLAS } from "./fx-atlas.generated.js";
 
 /**
@@ -75,6 +76,7 @@ function geometryFor(key, cfg) {
 /** Nướng lại từ pixelfx khi thiếu PNG (chậm hơn, chỉ là dự phòng) */
 function bakeFallback(cfg, kind) {
   if (kind === "chibi") return bakeChibi(cfg.look);
+  if (kind === "human") return bakeHuman(cfg.look);
   if (kind === "hero") return bakeHero(cfg.look);
   if (cfg.custom === "dust") return bakeDust();
   if (!cfg.pixelfx) return null;
